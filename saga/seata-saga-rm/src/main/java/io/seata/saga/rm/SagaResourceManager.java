@@ -71,6 +71,7 @@ public class SagaResourceManager extends AbstractResourceManager {
     }
 
     /**
+     * SAGA模式 分支事务提交
      * SAGA branch commit
      *
      * @param branchType
@@ -114,6 +115,7 @@ public class SagaResourceManager extends AbstractResourceManager {
     }
 
     /**
+     * SAGA模式 分支事务回滚
      * SAGA branch rollback
      *
      * @param branchType      the branch type

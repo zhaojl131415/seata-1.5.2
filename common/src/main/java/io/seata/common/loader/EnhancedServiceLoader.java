@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 类型增强的服务加载器。
  * The type Enhanced service loader.
  *
  * @author slievrly

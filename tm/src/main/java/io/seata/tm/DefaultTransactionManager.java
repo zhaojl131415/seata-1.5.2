@@ -15,12 +15,14 @@
  */
 package io.seata.tm;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.seata.core.exception.TmTransactionException;
 import io.seata.core.exception.TransactionException;
 import io.seata.core.exception.TransactionExceptionCode;
 import io.seata.core.model.GlobalStatus;
 import io.seata.core.model.TransactionManager;
 import io.seata.core.protocol.ResultCode;
+import io.seata.core.protocol.RpcMessage;
 import io.seata.core.protocol.transaction.AbstractTransactionRequest;
 import io.seata.core.protocol.transaction.AbstractTransactionResponse;
 import io.seata.core.protocol.transaction.GlobalBeginRequest;
@@ -34,6 +36,7 @@ import io.seata.core.protocol.transaction.GlobalRollbackResponse;
 import io.seata.core.protocol.transaction.GlobalStatusRequest;
 import io.seata.core.protocol.transaction.GlobalStatusResponse;
 import io.seata.core.rpc.netty.TmNettyRemotingClient;
+import io.seata.core.rpc.processor.server.ServerOnRequestProcessor;
 
 import java.util.concurrent.TimeoutException;
 
@@ -50,6 +53,9 @@ public class DefaultTransactionManager implements TransactionManager {
         GlobalBeginRequest request = new GlobalBeginRequest();
         request.setTransactionName(name);
         request.setTimeout(timeout);
+        /**
+         * 通过netty发送异步消息
+         */
         GlobalBeginResponse response = (GlobalBeginResponse) syncCall(request);
         if (response.getResultCode() == ResultCode.Failed) {
             throw new TmTransactionException(TransactionExceptionCode.BeginFailed, response.getMsg());
@@ -61,6 +67,9 @@ public class DefaultTransactionManager implements TransactionManager {
     public GlobalStatus commit(String xid) throws TransactionException {
         GlobalCommitRequest globalCommit = new GlobalCommitRequest();
         globalCommit.setXid(xid);
+        /**
+         * 通过netty发送异步消息
+         */
         GlobalCommitResponse response = (GlobalCommitResponse) syncCall(globalCommit);
         return response.getGlobalStatus();
     }
@@ -69,6 +78,9 @@ public class DefaultTransactionManager implements TransactionManager {
     public GlobalStatus rollback(String xid) throws TransactionException {
         GlobalRollbackRequest globalRollback = new GlobalRollbackRequest();
         globalRollback.setXid(xid);
+        /**
+         * 通过netty发送异步消息
+         */
         GlobalRollbackResponse response = (GlobalRollbackResponse) syncCall(globalRollback);
         return response.getGlobalStatus();
     }
@@ -77,6 +89,9 @@ public class DefaultTransactionManager implements TransactionManager {
     public GlobalStatus getStatus(String xid) throws TransactionException {
         GlobalStatusRequest queryGlobalStatus = new GlobalStatusRequest();
         queryGlobalStatus.setXid(xid);
+        /**
+         * 通过netty发送异步消息
+         */
         GlobalStatusResponse response = (GlobalStatusResponse) syncCall(queryGlobalStatus);
         return response.getGlobalStatus();
     }
@@ -86,12 +101,19 @@ public class DefaultTransactionManager implements TransactionManager {
         GlobalReportRequest globalReport = new GlobalReportRequest();
         globalReport.setXid(xid);
         globalReport.setGlobalStatus(globalStatus);
+        /**
+         * 通过netty发送异步消息
+         */
         GlobalReportResponse response = (GlobalReportResponse) syncCall(globalReport);
         return response.getGlobalStatus();
     }
 
     private AbstractTransactionResponse syncCall(AbstractTransactionRequest request) throws TransactionException {
         try {
+            /**
+             * netty处理消息实现:
+             * @see ServerOnRequestProcessor#process(ChannelHandlerContext, RpcMessage)
+             */
             return (AbstractTransactionResponse) TmNettyRemotingClient.getInstance().sendSyncRequest(request);
         } catch (TimeoutException toe) {
             throw new TmTransactionException(TransactionExceptionCode.IO, "RPC timeout", toe);

@@ -20,6 +20,7 @@ import io.seata.core.protocol.AbstractMessage;
 import io.seata.core.rpc.RpcContext;
 
 /**
+ * 事务请求处理抽象类
  * The type Abstract transaction request.
  *
  * @author sharajava
@@ -27,6 +28,7 @@ import io.seata.core.rpc.RpcContext;
 public abstract class AbstractTransactionRequest extends AbstractMessage {
 
     /**
+     * 处理抽象事务请求, 予以响应。
      * Handle abstract transaction response.
      *
      * @param rpcContext the rpc context

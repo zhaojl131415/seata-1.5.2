@@ -66,14 +66,19 @@ public class Server {
                 NettyServerConfig.getMaxServerPoolSize(), NettyServerConfig.getKeepAliveTime(), TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(NettyServerConfig.getMaxTaskQueueSize()),
                 new NamedThreadFactory("ServerHandlerThread", NettyServerConfig.getMaxServerPoolSize()), new ThreadPoolExecutor.CallerRunsPolicy());
-
+        // 实例化netty服务端: 指定服务端通道处理器
         NettyRemotingServer nettyRemotingServer = new NettyRemotingServer(workingThreads);
         UUIDGenerator.init(parameterParser.getServerNode());
         //log store mode : file, db, redis
         SessionHolder.init(parameterParser.getSessionStoreMode());
         LockerManagerFactory.init(parameterParser.getLockStoreMode());
+        // 事务协调者实例化
         DefaultCoordinator coordinator = DefaultCoordinator.getInstance(nettyRemotingServer);
+        /**
+         * 事务协调者初始化: 启动延时任务线程池执行
+         */
         coordinator.init();
+        // 指定netty服务端通道处理器
         nettyRemotingServer.setHandler(coordinator);
 
         // let ServerRunner do destroy instead ShutdownHook, see https://github.com/seata/seata/issues/4028
@@ -90,6 +95,11 @@ public class Server {
                 XID.setIpAddress(NetUtil.getLocalIp());
             }
         }
+        /**
+         * netty服务端初始化:
+         * 1. 注册处理器
+         * 2. 启动netty服务端
+         */
         nettyRemotingServer.init();
     }
 }

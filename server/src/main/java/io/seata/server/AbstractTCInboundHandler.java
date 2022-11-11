@@ -40,12 +40,14 @@ import io.seata.core.protocol.transaction.GlobalStatusRequest;
 import io.seata.core.protocol.transaction.GlobalStatusResponse;
 import io.seata.core.protocol.transaction.TCInboundHandler;
 import io.seata.core.rpc.RpcContext;
+import io.seata.server.coordinator.DefaultCoordinator;
 import io.seata.server.session.GlobalSession;
 import io.seata.server.session.SessionHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 事务协调者入栈处理器抽象类
  * The type Abstract tc inbound handler.
  *
  * @author sharajava
@@ -54,6 +56,12 @@ public abstract class AbstractTCInboundHandler extends AbstractExceptionHandler 
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractTCInboundHandler.class);
 
+    /**
+     * 处理全局事务开启请求
+     * @param request the global begin
+     * @param rpcContext  the rpc context
+     * @return
+     */
     @Override
     public GlobalBeginResponse handle(GlobalBeginRequest request, final RpcContext rpcContext) {
         GlobalBeginResponse response = new GlobalBeginResponse();
@@ -61,6 +69,10 @@ public abstract class AbstractTCInboundHandler extends AbstractExceptionHandler 
             @Override
             public void execute(GlobalBeginRequest request, GlobalBeginResponse response) throws TransactionException {
                 try {
+                    /**
+                     * 执行全局事务开启
+                     * @see DefaultCoordinator#doGlobalBegin(GlobalBeginRequest, GlobalBeginResponse, RpcContext)
+                     */
                     doGlobalBegin(request, response, rpcContext);
                 } catch (StoreException e) {
                     throw new TransactionException(TransactionExceptionCode.FailedStore,
@@ -92,6 +104,10 @@ public abstract class AbstractTCInboundHandler extends AbstractExceptionHandler 
             public void execute(GlobalCommitRequest request, GlobalCommitResponse response)
                 throws TransactionException {
                 try {
+                    /**
+                     * 执行全局事务提交
+                     * @see DefaultCoordinator#doGlobalCommit(GlobalCommitRequest, GlobalCommitResponse, RpcContext)
+                     */
                     doGlobalCommit(request, response, rpcContext);
                 } catch (StoreException e) {
                     throw new TransactionException(TransactionExceptionCode.FailedStore,
@@ -137,6 +153,10 @@ public abstract class AbstractTCInboundHandler extends AbstractExceptionHandler 
             public void execute(GlobalRollbackRequest request, GlobalRollbackResponse response)
                 throws TransactionException {
                 try {
+                    /**
+                     * 处理全局事务回滚请求
+                     * @see DefaultCoordinator#doGlobalRollback(GlobalRollbackRequest, GlobalRollbackResponse, RpcContext)
+                     */
                     doGlobalRollback(request, response, rpcContext);
                 } catch (StoreException e) {
                     throw new TransactionException(TransactionExceptionCode.FailedStore, String
@@ -181,6 +201,10 @@ public abstract class AbstractTCInboundHandler extends AbstractExceptionHandler 
             public void execute(BranchRegisterRequest request, BranchRegisterResponse response)
                 throws TransactionException {
                 try {
+                    /**
+                     * 注册分支事务
+                     * @see DefaultCoordinator#doBranchRegister(BranchRegisterRequest, BranchRegisterResponse, RpcContext)
+                     */
                     doBranchRegister(request, response, rpcContext);
                 } catch (StoreException e) {
                     throw new TransactionException(TransactionExceptionCode.FailedStore, String
@@ -210,6 +234,10 @@ public abstract class AbstractTCInboundHandler extends AbstractExceptionHandler 
             public void execute(BranchReportRequest request, BranchReportResponse response)
                 throws TransactionException {
                 try {
+                    /**
+                     * 处理分支事务上报结果
+                     * @see DefaultCoordinator#doBranchReport(BranchReportRequest, BranchReportResponse, RpcContext)
+                     */
                     doBranchReport(request, response, rpcContext);
                 } catch (StoreException e) {
                     throw new TransactionException(TransactionExceptionCode.FailedStore, String

@@ -22,6 +22,7 @@ import java.util.Map;
 import io.seata.rm.datasource.SeataDataSourceProxy;
 
 /**
+ * 数据源代理持有人: 缓存对应的数据源代理类
  * the type data source proxy holder
  *
  * @author xingfudeshi@gmail.com
@@ -29,6 +30,9 @@ import io.seata.rm.datasource.SeataDataSourceProxy;
  */
 public class DataSourceProxyHolder {
 
+    /**
+     * 用于缓存数据源对应的数据源代理类
+     */
     private static final Map<DataSource, SeataDataSourceProxy> PROXY_MAP = new HashMap<>(4);
 
     static SeataDataSourceProxy put(DataSource origin, SeataDataSourceProxy proxy) {

@@ -42,6 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 处理事务协调者响应消息
  * process TC response message.
  * <p>
  * process message type:

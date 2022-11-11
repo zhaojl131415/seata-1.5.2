@@ -16,6 +16,7 @@
 package io.seata.core.protocol.transaction;
 
 /**
+ * 资源管理器入站处理器接口
  * The interface Rm inbound handler.
  *
  * @author sharajava
@@ -23,6 +24,7 @@ package io.seata.core.protocol.transaction;
 public interface RMInboundHandler {
 
     /**
+     * 处理分支事务提交请求
      * Handle branch commit response.
      *
      * @param request the request
@@ -31,6 +33,7 @@ public interface RMInboundHandler {
     BranchCommitResponse handle(BranchCommitRequest request);
 
     /**
+     * 处理分支事务回滚请求
      * Handle branch rollback response.
      *
      * @param request the request
@@ -39,6 +42,7 @@ public interface RMInboundHandler {
     BranchRollbackResponse handle(BranchRollbackRequest request);
 
     /**
+     * 处理删除undo log日志请求
      * Handle delete undo log .
      *
      * @param request the request

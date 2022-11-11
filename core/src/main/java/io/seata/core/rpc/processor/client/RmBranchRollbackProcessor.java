@@ -17,16 +17,19 @@ package io.seata.core.rpc.processor.client;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.seata.common.util.NetUtil;
+import io.seata.core.protocol.AbstractMessage;
 import io.seata.core.protocol.RpcMessage;
 import io.seata.core.protocol.transaction.BranchRollbackRequest;
 import io.seata.core.protocol.transaction.BranchRollbackResponse;
 import io.seata.core.rpc.RemotingClient;
+import io.seata.core.rpc.RpcContext;
 import io.seata.core.rpc.TransactionMessageHandler;
 import io.seata.core.rpc.processor.RemotingProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 执行事务协调者的全局回滚命令: 消息类型: BranchRollbackRequest
  * process TC do global rollback command.
  * <p>
  * process message type:
@@ -48,6 +51,12 @@ public class RmBranchRollbackProcessor implements RemotingProcessor {
         this.remotingClient = remotingClient;
     }
 
+    /**
+     * 分支事务接到事务协调者的回滚命令, 处理回滚
+     * @param ctx        Channel handler context.
+     * @param rpcMessage rpc message.
+     * @throws Exception
+     */
     @Override
     public void process(ChannelHandlerContext ctx, RpcMessage rpcMessage) throws Exception {
         String remoteAddress = NetUtil.toStringAddress(ctx.channel().remoteAddress());
@@ -55,11 +64,16 @@ public class RmBranchRollbackProcessor implements RemotingProcessor {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("rm handle branch rollback process:" + msg);
         }
+        // 处理分支事务回滚
         handleBranchRollback(rpcMessage, remoteAddress, (BranchRollbackRequest) msg);
     }
 
     private void handleBranchRollback(RpcMessage request, String serverAddress, BranchRollbackRequest branchRollbackRequest) {
         BranchRollbackResponse resultMessage;
+        /**
+         * 调用资源管理器处理分支事务回滚请求
+         * @see io.seata.rm.AbstractRMHandler#onRequest(AbstractMessage, RpcContext)
+         */
         resultMessage = (BranchRollbackResponse) handler.onRequest(branchRollbackRequest, null);
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("branch rollback result:" + resultMessage);

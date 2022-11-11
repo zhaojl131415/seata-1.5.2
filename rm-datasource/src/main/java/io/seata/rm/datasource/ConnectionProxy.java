@@ -185,11 +185,13 @@ public class ConnectionProxy extends AbstractConnectionProxy {
     public void commit() throws SQLException {
         try {
             lockRetryPolicy.execute(() -> {
+                // 提交
                 doCommit();
                 return null;
             });
         } catch (SQLException e) {
             if (targetConnection != null && !getAutoCommit() && !getContext().isAutoCommitChanged()) {
+                // 回滚
                 rollback();
             }
             throw e;
@@ -227,6 +229,7 @@ public class ConnectionProxy extends AbstractConnectionProxy {
 
     private void doCommit() throws SQLException {
         if (context.inGlobalTransaction()) {
+            // 执行全局事务提交
             processGlobalTransactionCommit();
         } else if (context.isGlobalLockRequire()) {
             processLocalCommitWithGlobalLocks();
@@ -247,12 +250,15 @@ public class ConnectionProxy extends AbstractConnectionProxy {
 
     private void processGlobalTransactionCommit() throws SQLException {
         try {
+            // 注册分支事务
             register();
         } catch (TransactionException e) {
             recognizeLockKeyConflictException(e, context.buildLockKeys());
         }
         try {
+            // 写入UndoLog
             UndoLogManagerFactory.getUndoLogManager(this.getDbType()).flushUndoLogs(this);
+            // 提交sql, 当前连接池事务提交, 但全局事务还没提交
             targetConnection.commit();
         } catch (Throwable ex) {
             LOGGER.error("process connectionProxy commit error: {}", ex.getMessage(), ex);
@@ -260,6 +266,7 @@ public class ConnectionProxy extends AbstractConnectionProxy {
             throw new SQLException(ex);
         }
         if (IS_REPORT_SUCCESS_ENABLE) {
+            // 上报提交结果: 分支事务上报结果
             report(true);
         }
         context.reset();
@@ -269,7 +276,9 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         if (!context.hasUndoLog() || !context.hasLockKey()) {
             return;
         }
-        
+        /**
+         * @see DefaultResourceManager#branchRegister(BranchType, String, String, String, String, String)
+         */
         Long branchId = DefaultResourceManager.get().branchRegister(BranchType.AT, getDataSourceProxy().getResourceId(),
             null, context.getXid(), context.getApplicationData(), context.buildLockKeys());
         context.setBranchId(branchId);
@@ -279,6 +288,7 @@ public class ConnectionProxy extends AbstractConnectionProxy {
     public void rollback() throws SQLException {
         targetConnection.rollback();
         if (context.inGlobalTransaction() && context.isBranchRegistered()) {
+            // 上报分支事务执行失败
             report(false);
         }
         context.reset();
@@ -303,6 +313,11 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         targetConnection.setAutoCommit(autoCommit);
     }
 
+    /**
+     * 上报分支事务执行结果
+     * @param commitDone
+     * @throws SQLException
+     */
     private void report(boolean commitDone) throws SQLException {
         if (context.getBranchId() == null) {
             return;
@@ -310,6 +325,10 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         int retry = REPORT_RETRY_COUNT;
         while (retry > 0) {
             try {
+                /**
+                 * 上报分支事务执行结果
+                 * @see DefaultResourceManager#branchReport(BranchType, String, long, BranchStatus, String)
+                 */
                 DefaultResourceManager.get().branchReport(BranchType.AT, context.getXid(), context.getBranchId(),
                     commitDone ? BranchStatus.PhaseOne_Done : BranchStatus.PhaseOne_Failed, null);
                 return;

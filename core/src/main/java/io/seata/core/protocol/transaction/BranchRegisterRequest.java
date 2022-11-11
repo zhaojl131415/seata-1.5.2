@@ -133,6 +133,10 @@ public class BranchRegisterRequest extends AbstractTransactionRequestToTC  {
 
     @Override
     public AbstractTransactionResponse handle(RpcContext rpcContext) {
+        /**
+         * 处理分支事务注册请求
+         * @see io.seata.server.AbstractTCInboundHandler#handle(BranchRegisterRequest, RpcContext)
+         */
         return handler.handle(this, rpcContext);
     }
 

@@ -124,6 +124,10 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
             mergeSendExecutorService.submit(new MergedSendRunnable());
         }
         super.init();
+        /**
+         * netty客户端启动
+         * @see NettyClientBootstrap#start()
+         */
         clientBootstrap.start();
     }
 
@@ -131,7 +135,9 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
                                        ThreadPoolExecutor messageExecutor, NettyPoolKey.TransactionRole transactionRole) {
         super(messageExecutor);
         this.transactionRole = transactionRole;
+        // netty客户端的逻辑
         clientBootstrap = new NettyClientBootstrap(nettyClientConfig, eventExecutorGroup, transactionRole);
+        // 设置netty客户端的通道处理器: 通道读取netty消息
         clientBootstrap.setChannelHandlers(new ClientHandler());
         clientChannelManager = new NettyClientChannelManager(
             new NettyPoolableFactory(this, clientBootstrap), getPoolKeyFunction(), nettyClientConfig);
@@ -406,16 +412,27 @@ public abstract class AbstractNettyRemotingClient extends AbstractNettyRemoting 
     }
 
     /**
+     * 客户端处理器
      * The type ClientHandler.
      */
     @Sharable
     class ClientHandler extends ChannelDuplexHandler {
 
+        /**
+         * 读取netty通道消息
+         * @param ctx
+         * @param msg
+         * @throws Exception
+         */
         @Override
         public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
             if (!(msg instanceof RpcMessage)) {
                 return;
             }
+            /**
+             * netty客户端处理通道消息: 关键
+             * @see AbstractNettyRemoting#processMessage(ChannelHandlerContext, RpcMessage)
+             */
             processMessage(ctx, (RpcMessage) msg);
         }
 

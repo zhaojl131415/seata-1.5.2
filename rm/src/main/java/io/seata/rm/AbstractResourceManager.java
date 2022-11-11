@@ -15,6 +15,7 @@
  */
 package io.seata.rm;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.seata.common.exception.NotSupportYetException;
 import io.seata.core.exception.RmTransactionException;
 import io.seata.core.exception.TransactionException;
@@ -24,17 +25,20 @@ import io.seata.core.model.BranchType;
 import io.seata.core.model.Resource;
 import io.seata.core.model.ResourceManager;
 import io.seata.core.protocol.ResultCode;
+import io.seata.core.protocol.RpcMessage;
 import io.seata.core.protocol.transaction.BranchRegisterRequest;
 import io.seata.core.protocol.transaction.BranchRegisterResponse;
 import io.seata.core.protocol.transaction.BranchReportRequest;
 import io.seata.core.protocol.transaction.BranchReportResponse;
 import io.seata.core.rpc.netty.RmNettyRemotingClient;
+import io.seata.core.rpc.processor.server.ServerOnRequestProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeoutException;
 
 /**
+ * 抽象资源管理器
  * abstract ResourceManager
  *
  * @author zhangsen
@@ -44,6 +48,7 @@ public abstract class AbstractResourceManager implements ResourceManager {
     protected static final Logger LOGGER = LoggerFactory.getLogger(AbstractResourceManager.class);
 
     /**
+     * 注册分支事务
      * registry branch record
      *
      * @param branchType the branch type
@@ -64,6 +69,11 @@ public abstract class AbstractResourceManager implements ResourceManager {
             request.setBranchType(branchType);
             request.setApplicationData(applicationData);
 
+            /**
+             * 发送netty消息
+             * netty处理消息实现:
+             * @see ServerOnRequestProcessor#process(ChannelHandlerContext, RpcMessage)
+             */
             BranchRegisterResponse response = (BranchRegisterResponse) RmNettyRemotingClient.getInstance().sendSyncRequest(request);
             if (response.getResultCode() == ResultCode.Failed) {
                 throw new RmTransactionException(response.getTransactionExceptionCode(), String.format("Response[ %s ]", response.getMsg()));
@@ -77,6 +87,7 @@ public abstract class AbstractResourceManager implements ResourceManager {
     }
 
     /**
+     * 上报分支事务状态
      * report branch status
      *
      * @param branchType      the branch type
@@ -95,6 +106,11 @@ public abstract class AbstractResourceManager implements ResourceManager {
             request.setStatus(status);
             request.setApplicationData(applicationData);
 
+            /**
+             * 发送netty消息
+             * netty处理消息实现:
+             * @see ServerOnRequestProcessor#process(ChannelHandlerContext, RpcMessage)
+             */
             BranchReportResponse response = (BranchReportResponse) RmNettyRemotingClient.getInstance().sendSyncRequest(request);
             if (response.getResultCode() == ResultCode.Failed) {
                 throw new RmTransactionException(response.getTransactionExceptionCode(), String.format("Response[ %s ]", response.getMsg()));

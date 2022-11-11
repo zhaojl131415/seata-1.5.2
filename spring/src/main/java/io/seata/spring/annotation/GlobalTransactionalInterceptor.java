@@ -62,6 +62,7 @@ import static io.seata.common.DefaultValues.DEFAULT_TM_DEGRADE_CHECK_PERIOD;
 import static io.seata.common.DefaultValues.TM_INTERCEPTOR_ORDER;
 
 /**
+ * 全局事务拦截器
  * The type Global transactional interceptor.
  *
  * @author slievrly
@@ -169,8 +170,14 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
                     } else {
                         transactional = this.aspectTransactional;
                     }
+                    /**
+                     * 处理全局事务: 开启全局事务
+                     */
                     return handleGlobalTransaction(methodInvocation, transactional);
                 } else if (globalLockAnnotation != null) {
+                    /**
+                     * 处理全局锁
+                     */
                     return handleGlobalLock(methodInvocation, globalLockAnnotation);
                 }
             }
@@ -178,6 +185,9 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
         return methodInvocation.proceed();
     }
 
+    /**
+     * 处理全局锁
+     */
     private Object handleGlobalLock(final MethodInvocation methodInvocation, final GlobalLock globalLockAnno) throws Throwable {
         return globalLockTemplate.execute(new GlobalLockExecutor() {
             @Override
@@ -195,11 +205,20 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
         });
     }
 
+    /**
+     * 处理全局事务
+     * @param methodInvocation
+     * @param aspectTransactional
+     * @return
+     * @throws Throwable
+     */
     Object handleGlobalTransaction(final MethodInvocation methodInvocation,
         final AspectTransactional aspectTransactional) throws Throwable {
         boolean succeed = true;
         try {
+            // 对业务方法进行增强: 前后添加全局事务处理
             return transactionalTemplate.execute(new TransactionalExecutor() {
+                // 执行业务方法
                 @Override
                 public Object execute() throws Throwable {
                     return methodInvocation.proceed();

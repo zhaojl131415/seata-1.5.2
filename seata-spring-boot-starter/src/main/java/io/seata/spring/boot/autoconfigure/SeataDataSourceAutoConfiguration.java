@@ -33,12 +33,14 @@ import static io.seata.spring.annotation.datasource.AutoDataSourceProxyRegistrar
  * @author xingfudeshi@gmail.com
  */
 @ConditionalOnBean(DataSource.class)
+// 判断是否配置
 @ConditionalOnExpression("${seata.enabled:true} && ${seata.enableAutoDataSourceProxy:true} && ${seata.enable-auto-data-source-proxy:true}")
 @AutoConfigureAfter({SeataCoreAutoConfiguration.class})
 public class SeataDataSourceAutoConfiguration {
 
     /**
      * The bean seataAutoDataSourceProxyCreator.
+     * 注入{@link SeataAutoDataSourceProxyCreator}: 默认AT模式
      */
     @Bean(BEAN_NAME_SEATA_AUTO_DATA_SOURCE_PROXY_CREATOR)
     @ConditionalOnMissingBean(SeataAutoDataSourceProxyCreator.class)

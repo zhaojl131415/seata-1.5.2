@@ -32,6 +32,7 @@ import org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator;
 import org.springframework.aop.support.DefaultIntroductionAdvisor;
 
 /**
+ * Seata自动数据源代理创建器
  * @author xingfudeshi@gmail.com
  * @author selfishlover
  */
@@ -49,9 +50,15 @@ public class SeataAutoDataSourceProxyCreator extends AbstractAutoProxyCreator {
         setProxyTargetClass(!useJdkProxy);
         this.excludes = new HashSet<>(Arrays.asList(excludes));
         this.dataSourceProxyMode = dataSourceProxyMode;
+        // 构建默认拦截器: Seata自动数据源代理拦截器
         this.advisors = buildAdvisors(dataSourceProxyMode);
     }
 
+    /**
+     * 构建默认拦截器: Seata自动数据源代理拦截器
+     * @param dataSourceProxyMode
+     * @return
+     */
     private Object[] buildAdvisors(String dataSourceProxyMode) {
         Advice advice = new SeataAutoDataSourceProxyAdvice(dataSourceProxyMode);
         return new Object[]{new DefaultIntroductionAdvisor(advice)};
@@ -77,7 +84,7 @@ public class SeataAutoDataSourceProxyCreator extends AbstractAutoProxyCreator {
             return bean;
         }
 
-        // when this bean is just a simple DataSource, not SeataDataSourceProxy
+        // when this bean is just a simple DataSource, not SeataDataSourceProxy 当这个bean只是一个简单的数据源，而不是seatadasourceproxy
         if (!(bean instanceof SeataDataSourceProxy)) {
             Object enhancer = super.wrapIfNecessary(bean, beanName, cacheKey);
             // this mean this bean is either excluded by user or had been proxy before
@@ -86,6 +93,9 @@ public class SeataAutoDataSourceProxyCreator extends AbstractAutoProxyCreator {
             }
             // else, build proxy,  put <origin, proxy> to holder and return enhancer
             DataSource origin = (DataSource) bean;
+            /**
+             * 构建seata数据源代理类
+             */
             SeataDataSourceProxy proxy = buildProxy(origin, dataSourceProxyMode);
             DataSourceProxyHolder.put(origin, proxy);
             return enhancer;
@@ -109,6 +119,12 @@ public class SeataAutoDataSourceProxyCreator extends AbstractAutoProxyCreator {
         return originEnhancer;
     }
 
+    /**
+     * 构建数据源代理
+     * @param origin
+     * @param proxyMode
+     * @return
+     */
     SeataDataSourceProxy buildProxy(DataSource origin, String proxyMode) {
         if (BranchType.AT.name().equalsIgnoreCase(proxyMode)) {
             return new DataSourceProxy(origin);

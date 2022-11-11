@@ -31,6 +31,10 @@ public class GlobalCommitRequest extends AbstractGlobalEndRequest {
 
     @Override
     public AbstractTransactionResponse handle(RpcContext rpcContext) {
+        /**
+         * 全局事务提交
+         * @see io.seata.server.AbstractTCInboundHandler#handle(GlobalCommitRequest, RpcContext)
+         */
         return handler.handle(this, rpcContext);
     }
 }

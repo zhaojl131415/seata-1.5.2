@@ -85,6 +85,7 @@ public class ExecuteTemplate {
         if (CollectionUtils.isEmpty(sqlRecognizers)) {
             executor = new PlainExecutor<>(statementProxy, statementCallback);
         } else {
+            // 解析SQL类型
             if (sqlRecognizers.size() == 1) {
                 SQLRecognizer sqlRecognizer = sqlRecognizers.get(0);
                 switch (sqlRecognizer.getSQLType()) {
@@ -123,6 +124,10 @@ public class ExecuteTemplate {
         }
         T rs;
         try {
+            /**
+             * 执行器执行sql
+             * @see BaseTransactionalExecutor#execute(Object...)
+             */
             rs = executor.execute(args);
         } catch (Throwable ex) {
             if (!(ex instanceof SQLException)) {

@@ -16,6 +16,7 @@
 package io.seata.tm.api;
 
 /**
+ * 当前线程在全局事务中的角色
  * Role of current thread involve in a global transaction.
  *
  * @author sharajava
@@ -23,13 +24,13 @@ package io.seata.tm.api;
 public enum GlobalTransactionRole {
 
     /**
-     * The Launcher.
+     * The Launcher. 事务发起者
      */
     // The one begins the current global transaction.
     Launcher,
 
     /**
-     * The Participant.
+     * The Participant. 事务参与者
      */
     // The one just joins into a existing global transaction.
     Participant

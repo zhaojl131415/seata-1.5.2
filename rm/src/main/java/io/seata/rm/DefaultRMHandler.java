@@ -58,6 +58,9 @@ public class DefaultRMHandler extends AbstractRMHandler {
     public BranchCommitResponse handle(BranchCommitRequest request) {
         MDC.put(RootContext.MDC_KEY_XID, request.getXid());
         MDC.put(RootContext.MDC_KEY_BRANCH_ID, String.valueOf(request.getBranchId()));
+        /**
+         * @see AbstractRMHandler#handle(BranchCommitRequest)
+         */
         return getRMHandler(request.getBranchType()).handle(request);
     }
 
@@ -65,11 +68,24 @@ public class DefaultRMHandler extends AbstractRMHandler {
     public BranchRollbackResponse handle(BranchRollbackRequest request) {
         MDC.put(RootContext.MDC_KEY_XID, request.getXid());
         MDC.put(RootContext.MDC_KEY_BRANCH_ID, String.valueOf(request.getBranchId()));
+        /**
+         * @see AbstractRMHandler#handle(BranchRollbackRequest)
+         */
         return getRMHandler(request.getBranchType()).handle(request);
     }
 
     @Override
     public void handle(UndoLogDeleteRequest request) {
+        /**
+         * 处理UndoLog删除请求
+         *
+         * AT模式
+         * @see io.seata.rm.RMHandlerAT#handle(UndoLogDeleteRequest)
+         * SAGA模式: 空方法
+         * @see io.seata.saga.rm.RMHandlerSaga#handle(UndoLogDeleteRequest)
+         * TCC模式: 空方法
+         * @see io.seata.rm.tcc.RMHandlerTCC#handle(UndoLogDeleteRequest)
+         */
         getRMHandler(request.getBranchType()).handle(request);
     }
 

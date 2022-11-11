@@ -18,6 +18,7 @@ package io.seata.core.model;
 import io.seata.core.exception.TransactionException;
 
 /**
+ * 咨询管理器 出站接口: 用于向事务协调者发送出站请求
  * Resource Manager: send outbound request to TC.
  *
  * @author sharajava

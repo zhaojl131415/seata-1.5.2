@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 服务端用来处理 TM客户端注册消息 的处理器
  * process TM client registry message.
  * <p>
  * process message type:

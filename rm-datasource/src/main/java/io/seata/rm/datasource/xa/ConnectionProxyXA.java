@@ -21,6 +21,8 @@ import javax.sql.PooledConnection;
 import javax.sql.XAConnection;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
+import javax.transaction.xa.Xid;
+
 import io.seata.common.DefaultValues;
 import io.seata.common.util.StringUtils;
 import io.seata.config.ConfigurationFactory;
@@ -102,12 +104,14 @@ public class ConnectionProxyXA extends AbstractConnectionProxyXA implements Hold
         if (this.xaBranchXid != null) {
             String xaBranchXid = this.xaBranchXid.toString();
             if (isHeld()) {
+                // 释放分支
                 resource.release(xaBranchXid, this);
             }
         }
     }
 
     /**
+     * XA模式 二阶段预提交
      * XA commit
      * @param xid global transaction xid
      * @param branchId transaction branch id
@@ -121,6 +125,7 @@ public class ConnectionProxyXA extends AbstractConnectionProxyXA implements Hold
     }
 
     /**
+     * XA模式 回滚
      * XA rollback
      * @param xid global transaction xid
      * @param branchId transaction branch id
@@ -133,6 +138,7 @@ public class ConnectionProxyXA extends AbstractConnectionProxyXA implements Hold
     }
 
     /**
+     * XA模式 回滚
      * XA rollback
      * @param xaXid xaXid
      * @throws XAException XAException
@@ -142,6 +148,12 @@ public class ConnectionProxyXA extends AbstractConnectionProxyXA implements Hold
         releaseIfNecessary();
     }
 
+    /**
+     * XA模式 取消自动提交: 开启XA模式分支事务
+     * @param autoCommit <code>true</code> to enable auto-commit mode;
+     *         <code>false</code> to disable it
+     * @throws SQLException
+     */
     @Override
     public void setAutoCommit(boolean autoCommit) throws SQLException {
         if (currentAutoCommitStatus == autoCommit) {
@@ -158,22 +170,27 @@ public class ConnectionProxyXA extends AbstractConnectionProxyXA implements Hold
             if (xaActive) {
                 throw new SQLException("should NEVER happen: setAutoCommit from true to false while xa branch is active");
             }
-            // Start a XA branch
+            // Start a XA branch 开启一个XA模式的分支事务
             long branchId;
             try {
                 // 1. register branch to TC then get the branch message
                 branchRegisterTime = System.currentTimeMillis();
+                /**
+                 * 将分支事务注册到TC
+                 * @see DefaultResourceManager#branchRegister(BranchType, String, String, String, String, String)
+                 */
                 branchId = DefaultResourceManager.get().branchRegister(BranchType.XA, resource.getResourceId(), null, xid, null,
                         null);
             } catch (TransactionException te) {
                 cleanXABranchContext();
                 throw new SQLException("failed to register xa branch " + xid + " since " + te.getCode() + ":" + te.getMessage(), te);
             }
-            // 2. build XA-Xid with xid and branchId
+            // 2. build XA-Xid with xid and branchId 构建XA模式分支事务id
             this.xaBranchXid = XAXidBuilder.build(xid, branchId);
             // Keep the Connection if necessary
             keepIfNecessary();
             try {
+                // 开启XA模式分支事务
                 start();
             } catch (XAException e) {
                 cleanXABranchContext();
@@ -192,6 +209,10 @@ public class ConnectionProxyXA extends AbstractConnectionProxyXA implements Hold
         return currentAutoCommitStatus;
     }
 
+    /**
+     * XA模式 一阶段预提交
+     * @throws SQLException
+     */
     @Override
     public synchronized void commit() throws SQLException {
         if (currentAutoCommitStatus) {
@@ -202,14 +223,16 @@ public class ConnectionProxyXA extends AbstractConnectionProxyXA implements Hold
             throw new SQLException("should NOT commit on an inactive session", SQLSTATE_XA_NOT_END);
         }
         try {
+            // XA模式分支事务结束
             end(XAResource.TMSUCCESS);
             long now = System.currentTimeMillis();
             checkTimeout(now);
             setPrepareTime(now);
+            // 一阶段的预提交
             xaResource.prepare(xaBranchXid);
         } catch (XAException xe) {
             try {
-                // Branch Report to TC: Failed
+                // Branch Report to TC: Failed 如果捕获到异常, 分支事务上报提交失败给TC
                 DefaultResourceManager.get().branchReport(BranchType.XA, xid, xaBranchXid.getBranchId(),
                     BranchStatus.PhaseOne_Failed, null);
             } catch (TransactionException te) {
@@ -225,6 +248,10 @@ public class ConnectionProxyXA extends AbstractConnectionProxyXA implements Hold
         }
     }
 
+    /**
+     * XA模式 回滚
+     * @throws SQLException
+     */
     @Override
     public void rollback() throws SQLException {
         if (currentAutoCommitStatus) {
@@ -236,11 +263,12 @@ public class ConnectionProxyXA extends AbstractConnectionProxyXA implements Hold
         }
         try {
             if (!rollBacked) {
-                // XA End: Fail
+                // XA End: Fail XA模式分支事务结束: 失败
                 xaResource.end(this.xaBranchXid, XAResource.TMFAIL);
+                // XA模式分支事务回滚
                 xaRollback(xaBranchXid);
             }
-            // Branch Report to TC
+            // Branch Report to TC 分支事务上报失败给TC
             DefaultResourceManager.get().branchReport(BranchType.XA, xid, xaBranchXid.getBranchId(),
                 BranchStatus.PhaseOne_Failed, null);
             LOGGER.info(xaBranchXid + " was rollbacked");
@@ -258,6 +286,10 @@ public class ConnectionProxyXA extends AbstractConnectionProxyXA implements Hold
 
     private synchronized void start() throws XAException, SQLException {
         // 3. XA Start
+        /**
+         * XA模式启动本地事务: 调用支持XA模式的数据源源码实现(MySql)
+         * @see com.mysql.jdbc.jdbc2.optional.MysqlXAConnection#start(Xid, int)
+         */
         xaResource.start(this.xaBranchXid, XAResource.TMNOFLAGS);
         try {
             termination();

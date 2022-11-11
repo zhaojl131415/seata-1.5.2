@@ -37,6 +37,7 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 
 /**
+ * 用于XA模式的PreparedStatement代理。
  * PreparedStatement proxy for XA mode.
  *
  * @author sharajava
@@ -51,6 +52,11 @@ public class PreparedStatementProxyXA extends StatementProxyXA implements Prepar
         return (PreparedStatement)targetStatement;
     }
 
+    /**
+     * XA 模式 执行查询
+     * @return
+     * @throws SQLException
+     */
     @Override
     public ResultSet executeQuery() throws SQLException {
         return ExecuteTemplateXA.execute(connectionProxyXA, (statement, args) -> statement.executeQuery(), getTargetStatement());

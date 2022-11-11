@@ -24,6 +24,7 @@ import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.type.AnnotationMetadata;
 
 /**
+ * 自动数据源代理注册器
  * @author xingfudeshi@gmail.com
  * The type auto data source proxy registrar
  */
@@ -43,6 +44,9 @@ public class AutoDataSourceProxyRegistrar implements ImportBeanDefinitionRegistr
         String dataSourceProxyMode = (String) annotationAttributes.get(ATTRIBUTE_KEY_DATA_SOURCE_PROXY_MODE);
 
         //register seataAutoDataSourceProxyCreator bean def
+        /**
+         * 向spring容器中注册{@link SeataAutoDataSourceProxyCreator}
+         */
         if (!registry.containsBeanDefinition(BEAN_NAME_SEATA_AUTO_DATA_SOURCE_PROXY_CREATOR)) {
             AbstractBeanDefinition beanDefinition = BeanDefinitionBuilder
                 .genericBeanDefinition(SeataAutoDataSourceProxyCreator.class)

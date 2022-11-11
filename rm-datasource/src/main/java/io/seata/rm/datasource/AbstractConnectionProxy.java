@@ -96,12 +96,25 @@ public abstract class AbstractConnectionProxy implements Connection {
         return dataSourceProxy.getDbType();
     }
 
+    /**
+     * 对Statement进行了代理
+     * 通过连接池代理类获取Statement时（父类AbstractConnectionProxy方法），Seata也对Statement进行了代理
+     * @return
+     * @throws SQLException
+     */
     @Override
     public Statement createStatement() throws SQLException {
         Statement targetStatement = getTargetConnection().createStatement();
         return new StatementProxy(this, targetStatement);
     }
 
+    /**
+     * seata对数据源到statement都进行了代理，当statement执行SQL时，最终调用ExecuteTemplate.execute核心方法
+     * @param sql an SQL statement that may contain one or more '?' IN
+     * parameter placeholders
+     * @return
+     * @throws SQLException
+     */
     @Override
     public PreparedStatement prepareStatement(String sql) throws SQLException {
         String dbType = getDbType();

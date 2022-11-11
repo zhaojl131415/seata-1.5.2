@@ -32,6 +32,10 @@ public class BranchRollbackRequest extends AbstractBranchEndRequest {
 
     @Override
     public AbstractTransactionResponse handle(RpcContext rpcContext) {
+        /**
+         * 处理分支事务回滚请求
+         * @see io.seata.rm.DefaultRMHandler#handle(BranchRollbackRequest)
+         */
         return handler.handle(this);
     }
 }

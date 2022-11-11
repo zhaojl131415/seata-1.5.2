@@ -18,6 +18,7 @@ package io.seata.rm.tcc.store.db.sql;
 import io.seata.rm.tcc.constant.TCCFenceConstant;
 
 /**
+ * TCC围栏Sqls仓库
  * TCC Fence Store Sqls
  *
  * @author kaka2code

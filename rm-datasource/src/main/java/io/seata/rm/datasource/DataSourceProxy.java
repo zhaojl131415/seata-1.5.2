@@ -147,12 +147,25 @@ public class DataSourceProxy extends AbstractDataSourceProxy implements Resource
         return dbType;
     }
 
+    /**
+     * 数据源获取连接池的时候，也会对连接池进行代理（ConnectionProxy）
+     * @return
+     * @throws SQLException
+     */
     @Override
     public ConnectionProxy getConnection() throws SQLException {
         Connection targetConnection = targetDataSource.getConnection();
         return new ConnectionProxy(this, targetConnection);
     }
 
+    /**
+     * 数据源获取连接池的时候，也会对连接池进行代理（ConnectionProxy）
+     * @param username the database user on whose behalf the connection is
+     *  being made
+     * @param password the user's password
+     * @return
+     * @throws SQLException
+     */
     @Override
     public ConnectionProxy getConnection(String username, String password) throws SQLException {
         Connection targetConnection = targetDataSource.getConnection(username, password);

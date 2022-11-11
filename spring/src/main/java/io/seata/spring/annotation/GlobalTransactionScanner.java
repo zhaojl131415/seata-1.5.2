@@ -36,6 +36,7 @@ import io.seata.core.rpc.ShutdownHook;
 import io.seata.core.rpc.netty.RmNettyRemotingClient;
 import io.seata.core.rpc.netty.TmNettyRemotingClient;
 import io.seata.rm.RMClient;
+import io.seata.spring.annotation.datasource.SeataAutoDataSourceProxyCreator;
 import io.seata.spring.annotation.scannercheckers.PackageScannerChecker;
 import io.seata.spring.tcc.TccActionInterceptor;
 import io.seata.spring.util.OrderUtil;
@@ -70,6 +71,17 @@ import static io.seata.common.DefaultValues.DEFAULT_TX_GROUP_OLD;
 
 /**
  * The type Global transaction scanner.
+ * 全局事务扫描器
+ * 1. TM、RM注册
+ *  它实现InitializingBean接口, 在spring容器创建bean时，会调用实现类的{@link #afterPropertiesSet()}
+ *  内部调用{@link #initClient()}方法中，进行TM、RM注册
+ * 2.引入全局事务拦截器{@link GlobalTransactionalInterceptor}
+ *  全局事务扫描器继承了AbstractAutoProxyCreator，是个后置处理器，并重写了wrapIfNecessary方法
+ *  在spring容器创建bean时，会调用postProcessAfterInitialization后置处理器方法，执行实现类的{@link #wrapIfNecessary(Object, String, Object)}
+ *  在方法中引入了全局事务拦截器{@link GlobalTransactionalInterceptor}
+ * 3.客户端请求时调用拦截器invoke方法，发起全局事务
+ *  在客户端发起请求时, 会被上面的全局事务拦截器给拦截到, 执行{@link GlobalTransactionalInterceptor#invoke(MethodInvocation)}方法,
+ *  调用{@link GlobalTransactionalInterceptor#handleGlobalTransaction(MethodInvocation, AspectTransactional)}方法, 发起全局事务
  *
  * @author slievrly
  */
@@ -94,7 +106,15 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
 
     private static ConfigurableListableBeanFactory beanFactory;
 
+    /**
+     * 拦截器
+     */
     private MethodInterceptor interceptor;
+
+    /**
+     * 全局拦截器
+     * @see GlobalTransactionalInterceptor
+     */
     private MethodInterceptor globalTransactionalInterceptor;
 
     private final String applicationId;
@@ -216,12 +236,12 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
         if (StringUtils.isNullOrEmpty(applicationId) || StringUtils.isNullOrEmpty(txServiceGroup)) {
             throw new IllegalArgumentException(String.format("applicationId: %s, txServiceGroup: %s", applicationId, txServiceGroup));
         }
-        //init TM
+        //init TM 初始化事务管理器
         TMClient.init(applicationId, txServiceGroup, accessKey, secretKey);
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Transaction Manager Client is initialized. applicationId[{}] txServiceGroup[{}]", applicationId, txServiceGroup);
         }
-        //init RM
+        //init RM 初始化资源管理器
         RMClient.init(applicationId, txServiceGroup);
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Resource Manager is initialized. applicationId[{}] txServiceGroup[{}]", applicationId, txServiceGroup);
@@ -244,6 +264,12 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
     }
 
     /**
+     * 全局事务扫描器继承了AbstractAutoProxyCreator，是个后置处理器，并重写了wrapIfNecessary方法, 表示需要AOP代理/增强
+     * 在spring容器创建bean时，会调用postProcessAfterInitialization后置处理器方法，然后执行wrapIfNecessary
+     * 引入全局事务拦截器GlobalTransactionalInterceptor, 在客户端发起请求时会调用拦截器invoke方法，发起全局事务
+     * @see GlobalTransactionalInterceptor#invoke(MethodInvocation)
+     *
+     * 以下将进行扫描，并添加相应的拦截器
      * The following will be scanned, and added corresponding interceptor:
      *
      * TM:
@@ -276,7 +302,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
                     return bean;
                 }
                 interceptor = null;
-                //check TCC proxy
+                //check TCC proxy 检查是否是TCC模式, 如果是, 则添加TCC拦截器
                 if (TCCBeanParserUtils.isTccAutoProxy(bean, beanName, applicationContext)) {
                     // init tcc fence clean task if enable useTccFence
                     TCCBeanParserUtils.initTccFenceCleanTask(TCCBeanParserUtils.getRemotingDesc(beanName), applicationContext);
@@ -287,13 +313,16 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
                 } else {
                     Class<?> serviceInterface = SpringProxyUtils.findTargetClass(bean);
                     Class<?>[] interfacesIfJdk = SpringProxyUtils.findInterfaces(bean);
-
+                    /**
+                     * 判断是否存在 {@link GlobalTransactional} 或 {@link GlobalLock} 注解, 如果不存在, 则直接返回不代理
+                     */
                     if (!existsAnnotation(new Class[]{serviceInterface})
                         && !existsAnnotation(interfacesIfJdk)) {
                         return bean;
                     }
 
                     if (globalTransactionalInterceptor == null) {
+                        // 指定全局事务拦截器
                         globalTransactionalInterceptor = new GlobalTransactionalInterceptor(failureHandlerHook);
                         ConfigurationCache.addConfigListener(
                                 ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION,
@@ -303,18 +332,27 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
                 }
 
                 LOGGER.info("Bean[{}] with name [{}] would use interceptor [{}]", bean.getClass().getName(), beanName, interceptor.getClass().getName());
+                // 检查是否是代理对象
                 if (!AopUtils.isAopProxy(bean)) {
+                    /**
+                     * 调用Spring代理（父级）
+                     * todo 存疑: 是否会在这里调用{@link SeataAutoDataSourceProxyCreator#wrapIfNecessary(Object, String, Object)}?
+                     */
                     bean = super.wrapIfNecessary(bean, beanName, cacheKey);
                 } else {
+                    // 已经是代理对象，反射获取代理类中的已经存在的拦截器组合，然后添加到该集合当中
                     AdvisedSupport advised = SpringProxyUtils.getAdvisedSupport(bean);
                     Advisor[] advisor = buildAdvisors(beanName, getAdvicesAndAdvisorsForBean(null, null, null));
                     int pos;
+                    // 遍历将bean的拦截器进行排序
                     for (Advisor avr : advisor) {
                         // Find the position based on the advisor's order, and add to advisors by pos
+                        // 根据拦截器的顺序找到下标位置，并通过位置添加到拦截器中
                         pos = findAddSeataAdvisorPosition(advised, avr);
                         advised.addAdvisor(pos, avr);
                     }
                 }
+                // 将Bean添加到已代理的Set集合中
                 PROXYED_SET.add(beanName);
                 return bean;
             }
@@ -498,6 +536,9 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
         return new Object[]{interceptor};
     }
 
+    /**
+     * spring 容器启动时, 会执行此方法
+     */
     @Override
     public void afterPropertiesSet() {
         if (disableGlobalTransaction) {
@@ -509,6 +550,9 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
             return;
         }
         if (initialized.compareAndSet(false, true)) {
+            /**
+             * 初始化客户端: 事务管理器/资源管理器/分支事务
+             */
             initClient();
         }
     }

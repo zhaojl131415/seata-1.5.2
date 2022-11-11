@@ -53,12 +53,18 @@ public abstract class AbstractNettyRemotingServer extends AbstractNettyRemoting 
     @Override
     public void init() {
         super.init();
+        /**
+         * netty服务端启动
+         * @see NettyServerBootstrap#start()
+         */
         serverBootstrap.start();
     }
 
     public AbstractNettyRemotingServer(ThreadPoolExecutor messageExecutor, NettyServerConfig nettyServerConfig) {
         super(messageExecutor);
+        // 实例化netty服务端
         serverBootstrap = new NettyServerBootstrap(nettyServerConfig);
+        // 指定netty服务端通道处理器
         serverBootstrap.setChannelHandlers(new ServerHandler());
     }
 
@@ -148,12 +154,14 @@ public abstract class AbstractNettyRemotingServer extends AbstractNettyRemoting 
     }
 
     /**
+     * netty服务端处理器
      * The type ServerHandler.
      */
     @ChannelHandler.Sharable
     class ServerHandler extends ChannelDuplexHandler {
 
         /**
+         * netty服务端读取通道消息
          * Channel read.
          *
          * @param ctx the ctx
@@ -165,6 +173,10 @@ public abstract class AbstractNettyRemotingServer extends AbstractNettyRemoting 
             if (!(msg instanceof RpcMessage)) {
                 return;
             }
+            /**
+             * netty服务端处理通道消息
+             * @see AbstractNettyRemoting#processMessage(ChannelHandlerContext, RpcMessage)
+             */
             processMessage(ctx, (RpcMessage) msg);
         }
 

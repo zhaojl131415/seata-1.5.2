@@ -41,6 +41,7 @@ import static io.seata.common.DefaultValues.DEFAULT_DISABLE_GLOBAL_TRANSACTION;
 import static io.seata.core.constants.ConfigurationKeys.TCC_ACTION_INTERCEPTOR_ORDER;
 
 /**
+ * TCC拦截器
  * TCC Interceptor
  *
  * @author zhangsen
@@ -80,7 +81,7 @@ public class TccActionInterceptor implements MethodInterceptor, ConfigurationCha
     @Override
     public Object invoke(final MethodInvocation invocation) throws Throwable {
         if (!RootContext.inGlobalTransaction() || disable || RootContext.inSagaBranch()) {
-            //not in transaction, or this interceptor is disabled
+            //not in transaction, or this interceptor is disabled 不在事务处理中，或者此拦截器被禁用
             return invocation.proceed();
         }
         Method method = getActionInterfaceMethod(invocation);

@@ -46,6 +46,7 @@ public class SeataProperties {
     private boolean enableAutoDataSourceProxy = true;
     /**
      * data source proxy mode
+     * 数据源代理模式: 默认AT模式
      */
     private String dataSourceProxyMode = DefaultValues.DEFAULT_DATA_SOURCE_PROXY_MODE;
     /**

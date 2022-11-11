@@ -77,6 +77,7 @@ import static io.seata.common.Constants.TX_TIMEOUT_CHECK;
 import static io.seata.common.Constants.UNDOLOG_DELETE;
 
 /**
+ * 默认的事务协调者对象
  * The type Default coordinator.
  */
 public class DefaultCoordinator extends AbstractTCInboundHandler implements TransactionMessageHandler, Disposable {
@@ -115,6 +116,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
             ConfigurationKeys.TRANSACTION_UNDO_LOG_DELETE_PERIOD, 24 * 60 * 60 * 1000);
 
     /**
+     * 事务UndoLog删除延时周期
      * The Transaction undo log delay delete period
      */
     protected static final long UNDO_LOG_DELAY_DELETE_PERIOD = 3 * 60 * 1000;
@@ -140,18 +142,23 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     private static final boolean ROLLBACK_RETRY_TIMEOUT_UNLOCK_ENABLE = ConfigurationFactory.getInstance().getBoolean(
             ConfigurationKeys.ROLLBACK_RETRY_TIMEOUT_UNLOCK_ENABLE, false);
 
+    /** 回滚重试延时线程池 */
     private final ScheduledThreadPoolExecutor retryRollbacking =
         new ScheduledThreadPoolExecutor(1, new NamedThreadFactory(RETRY_ROLLBACKING, 1));
 
+    /** 提交重试延时线程池 */
     private final ScheduledThreadPoolExecutor retryCommitting =
         new ScheduledThreadPoolExecutor(1, new NamedThreadFactory(RETRY_COMMITTING, 1));
 
+    /** 异步提交延时线程池 */
     private final ScheduledThreadPoolExecutor asyncCommitting =
         new ScheduledThreadPoolExecutor(1, new NamedThreadFactory(ASYNC_COMMITTING, 1));
 
+    /** 超时检查延时线程池 */
     private final ScheduledThreadPoolExecutor timeoutCheck =
         new ScheduledThreadPoolExecutor(1, new NamedThreadFactory(TX_TIMEOUT_CHECK, 1));
 
+    /** UndoLog删除延时线程池 */
     private final ScheduledThreadPoolExecutor undoLogDelete =
         new ScheduledThreadPoolExecutor(1, new NamedThreadFactory(UNDOLOG_DELETE, 1));
 
@@ -233,6 +240,10 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     @Override
     protected void doGlobalBegin(GlobalBeginRequest request, GlobalBeginResponse response, RpcContext rpcContext)
             throws TransactionException {
+        /**
+         * 开启全局事务
+         * @see DefaultCore#begin(String, String, String, int)
+         */
         response.setXid(core.begin(rpcContext.getApplicationId(), rpcContext.getTransactionServiceGroup(),
                 request.getTransactionName(), request.getTimeout()));
         if (LOGGER.isInfoEnabled()) {
@@ -245,6 +256,10 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     protected void doGlobalCommit(GlobalCommitRequest request, GlobalCommitResponse response, RpcContext rpcContext)
             throws TransactionException {
         MDC.put(RootContext.MDC_KEY_XID, request.getXid());
+        /**
+         * 全局事务提交
+         * @see DefaultCore#commit(String)
+         */
         response.setGlobalStatus(core.commit(request.getXid()));
     }
 
@@ -252,6 +267,10 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     protected void doGlobalRollback(GlobalRollbackRequest request, GlobalRollbackResponse response,
                                     RpcContext rpcContext) throws TransactionException {
         MDC.put(RootContext.MDC_KEY_XID, request.getXid());
+        /**
+         * 全局事务回滚
+         * @see DefaultCore#rollback(String)
+         */
         response.setGlobalStatus(core.rollback(request.getXid()));
     }
 
@@ -274,6 +293,9 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
                                     RpcContext rpcContext) throws TransactionException {
         MDC.put(RootContext.MDC_KEY_XID, request.getXid());
         response.setBranchId(
+                /**
+                 * 注册分支事务
+                 */
                 core.branchRegister(request.getBranchType(), request.getResourceId(), rpcContext.getClientId(),
                         request.getXid(), request.getApplicationData(), request.getLockKey()));
     }
@@ -283,6 +305,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
             throws TransactionException {
         MDC.put(RootContext.MDC_KEY_XID, request.getXid());
         MDC.put(RootContext.MDC_KEY_BRANCH_ID, String.valueOf(request.getBranchId()));
+        // 处理分支事务上报结果
         core.branchReport(request.getBranchType(), request.getXid(), request.getBranchId(), request.getStatus(),
                 request.getApplicationData());
     }
@@ -476,25 +499,31 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     }
 
     /**
+     * 初始化: 启动延时任务线程池执行
      * Init.
      */
     public void init() {
+        /** 启动回滚重试延时线程池 */
         retryRollbacking.scheduleAtFixedRate(
             () -> SessionHolder.distributedLockAndExecute(RETRY_ROLLBACKING, this::handleRetryRollbacking), 0,
             ROLLBACKING_RETRY_PERIOD, TimeUnit.MILLISECONDS);
 
+        /** 启动提交重试延时线程池 */
         retryCommitting.scheduleAtFixedRate(
             () -> SessionHolder.distributedLockAndExecute(RETRY_COMMITTING, this::handleRetryCommitting), 0,
             COMMITTING_RETRY_PERIOD, TimeUnit.MILLISECONDS);
 
+        /** 启动异步提交延时线程池 */
         asyncCommitting.scheduleAtFixedRate(
             () -> SessionHolder.distributedLockAndExecute(ASYNC_COMMITTING, this::handleAsyncCommitting), 0,
             ASYNC_COMMITTING_RETRY_PERIOD, TimeUnit.MILLISECONDS);
 
+        /** 启动超时检查延时线程池 */
         timeoutCheck.scheduleAtFixedRate(
             () -> SessionHolder.distributedLockAndExecute(TX_TIMEOUT_CHECK, this::timeoutCheck), 0,
             TIMEOUT_RETRY_PERIOD, TimeUnit.MILLISECONDS);
 
+        /** 启动UndoLog删除延时线程池 */
         undoLogDelete.scheduleAtFixedRate(
             () -> SessionHolder.distributedLockAndExecute(UNDOLOG_DELETE, this::undoLogDelete),
             UNDO_LOG_DELAY_DELETE_PERIOD, UNDO_LOG_DELETE_PERIOD, TimeUnit.MILLISECONDS);
@@ -505,9 +534,30 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
         if (!(request instanceof AbstractTransactionRequestToTC)) {
             throw new IllegalArgumentException();
         }
-        AbstractTransactionRequestToTC transactionRequest = (AbstractTransactionRequestToTC) request;
-        transactionRequest.setTCInboundHandler(this);
 
+        AbstractTransactionRequestToTC transactionRequest = (AbstractTransactionRequestToTC) request;
+        // 指定事务协调者处理器
+        transactionRequest.setTCInboundHandler(this);
+        /**
+         * 全局事务开启请求
+         * @see GlobalBeginRequest#handle(RpcContext)
+         * 全局事务提交请求
+         * @see GlobalCommitRequest#handle(RpcContext)
+         * 全局事务回滚请求
+         * @see GlobalRollbackRequest#handle(RpcContext)
+         * 全局事务结果上报请求
+         * @see GlobalReportRequest#handle(RpcContext)
+         * 全局事务状态请求
+         * @see GlobalStatusRequest#handle(RpcContext)
+         * 全局锁查询请求
+         * @see GlobalLockQueryRequest#handle(RpcContext)
+         *
+         *
+         * 分支事务注册请求
+         * @see BranchRegisterRequest#handle(RpcContext)
+         * 分支事务结果上报请求
+         * @see BranchReportRequest#handle(RpcContext)
+         */
         return transactionRequest.handle(context);
     }
 

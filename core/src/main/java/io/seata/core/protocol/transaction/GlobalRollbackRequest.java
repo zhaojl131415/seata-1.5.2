@@ -31,6 +31,10 @@ public class GlobalRollbackRequest extends AbstractGlobalEndRequest {
 
     @Override
     public AbstractTransactionResponse handle(RpcContext rpcContext) {
+        /**
+         * 处理全局事务回滚请求
+         * @see io.seata.server.AbstractTCInboundHandler#handle(GlobalRollbackRequest, RpcContext)
+         */
         return handler.handle(this, rpcContext);
     }
 }

@@ -21,6 +21,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.sql.SQLException;
 import javax.transaction.xa.XAException;
+
 import io.seata.common.DefaultValues;
 import io.seata.common.thread.NamedThreadFactory;
 import io.seata.config.ConfigurationFactory;
@@ -88,30 +89,71 @@ public class ResourceManagerXA extends AbstractDataSourceCacheResourceManager {
         return BranchType.XA;
     }
 
+    /**
+     * XA模式 分支事务提交
+     *
+     * @param branchType      the branch type
+     * @param xid             Transaction id.
+     * @param branchId        Branch id.
+     * @param resourceId      Resource id.
+     * @param applicationData Application data bind with this branch.
+     * @return
+     * @throws TransactionException
+     */
     @Override
     public BranchStatus branchCommit(BranchType branchType, String xid, long branchId, String resourceId,
                                      String applicationData) throws TransactionException {
         return finishBranch(true, branchType, xid, branchId, resourceId, applicationData);
     }
 
+    /**
+     * XA模式 分支事务回滚
+     *
+     * @param branchType      the branch type
+     * @param xid             Transaction id.
+     * @param branchId        Branch id.
+     * @param resourceId      Resource id.
+     * @param applicationData Application data bind with this branch.
+     * @return
+     * @throws TransactionException
+     */
     @Override
     public BranchStatus branchRollback(BranchType branchType, String xid, long branchId, String resourceId,
                                        String applicationData) throws TransactionException {
         return finishBranch(false, branchType, xid, branchId, resourceId, applicationData);
     }
 
+    /**
+     * 完成分支任务
+     *
+     * @param committed       提交true, 回滚false
+     * @param branchType
+     * @param xid             全局事务id
+     * @param branchId        分支事务id
+     * @param resourceId      资源id
+     * @param applicationData
+     * @return
+     * @throws TransactionException
+     */
     private BranchStatus finishBranch(boolean committed, BranchType branchType, String xid, long branchId, String resourceId,
-                                       String applicationData) throws TransactionException {
+                                      String applicationData) throws TransactionException {
+        // 获取XA模式 分支事务id
         XAXid xaBranchXid = XAXidBuilder.build(xid, branchId);
+        // 获取
         Resource resource = dataSourceCache.get(resourceId);
+        // 是否为XA模式
         if (resource instanceof AbstractDataSourceProxyXA) {
+            // 获取XA模式连接池代理实例
             try (ConnectionProxyXA connectionProxyXA =
-                ((AbstractDataSourceProxyXA)resource).getConnectionForXAFinish(xaBranchXid)) {
+                         ((AbstractDataSourceProxyXA) resource).getConnectionForXAFinish(xaBranchXid)) {
+                // 判断是提交还是回滚
                 if (committed) {
+                    // XA模式 二阶段提交
                     connectionProxyXA.xaCommit(xid, branchId, applicationData);
                     LOGGER.info(xaBranchXid + " was committed.");
                     return BranchStatus.PhaseTwo_Committed;
                 } else {
+                    // XA模式 二阶段回滚
                     connectionProxyXA.xaRollback(xid, branchId, applicationData);
                     LOGGER.info(xaBranchXid + " was rollbacked");
                     return BranchStatus.PhaseTwo_Rollbacked;

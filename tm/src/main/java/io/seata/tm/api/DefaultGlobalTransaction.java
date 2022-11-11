@@ -21,6 +21,7 @@ import io.seata.core.context.RootContext;
 import io.seata.core.exception.TransactionException;
 import io.seata.core.model.GlobalStatus;
 import io.seata.core.model.TransactionManager;
+import io.seata.tm.DefaultTransactionManager;
 import io.seata.tm.TransactionManagerHolder;
 import io.seata.tm.api.transaction.SuspendedResourcesHolder;
 import org.slf4j.Logger;
@@ -102,6 +103,10 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
             throw new IllegalStateException("Global transaction already exists," +
                 " can't begin a new global transaction, currentXid = " + currentXid);
         }
+        /**
+         * 开启全局事务: 通过netty发送异步消息通知事务协调者开启全局事务
+         * @see DefaultTransactionManager#begin(String, String, String, int)
+         */
         xid = transactionManager.begin(null, null, name, timeout);
         status = GlobalStatus.Begin;
         RootContext.bind(xid);
@@ -126,6 +131,10 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
             while (retry > 0) {
                 try {
                     retry--;
+                    /**
+                     * 提交全局事务: 通过netty发送异步消息通知事务协调者提交全局事务
+                     * @see DefaultTransactionManager#commit(String)
+                     */
                     status = transactionManager.commit(xid);
                     break;
                 } catch (Throwable ex) {
@@ -162,6 +171,10 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
             while (retry > 0) {
                 try {
                     retry--;
+                    /**
+                     * 回滚全局事务: 通过netty发送异步消息通知事务协调者回滚全局事务
+                     * @see DefaultTransactionManager#rollback(String)
+                     */
                     status = transactionManager.rollback(xid);
                     break;
                 } catch (Throwable ex) {

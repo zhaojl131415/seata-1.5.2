@@ -40,6 +40,7 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
+ * TCC围栏处理程序 (幂等、非回滚、挂起)
  * TCC Fence Handler(idempotent, non_rollback, suspend)
  *
  * @author kaka2code
@@ -97,6 +98,7 @@ public class TCCFenceHandler {
         return transactionTemplate.execute(status -> {
             try {
                 Connection conn = DataSourceUtils.getConnection(dataSource);
+                // 插入TCC围栏日志
                 boolean result = insertTCCFenceLog(conn, xid, branchId, actionName, TCCFenceConstant.STATUS_TRIED);
                 LOGGER.info("TCC fence prepare result: {}. xid: {}, branchId: {}", result, xid, branchId);
                 if (result) {
@@ -120,6 +122,7 @@ public class TCCFenceHandler {
     }
 
     /**
+     * tcc提交方法增强
      * tcc commit method enhanced
      *
      * @param commitMethod          commit method
@@ -134,6 +137,7 @@ public class TCCFenceHandler {
         return transactionTemplate.execute(status -> {
             try {
                 Connection conn = DataSourceUtils.getConnection(dataSource);
+                // 查询TCC围栏对象
                 TCCFenceDO tccFenceDO = TCC_FENCE_DAO.queryTCCFenceDO(conn, xid, branchId);
                 if (tccFenceDO == null) {
                     throw new TCCFenceException(String.format("TCC fence record not exists, commit fence method failed. xid= %s, branchId= %s", xid, branchId),
@@ -149,6 +153,7 @@ public class TCCFenceHandler {
                     }
                     return false;
                 }
+                // 更新状态, 执行目标方法
                 return updateStatusAndInvokeTargetMethod(conn, commitMethod, targetTCCBean, xid, branchId, TCCFenceConstant.STATUS_COMMITTED, status, args);
             } catch (Throwable t) {
                 status.setRollbackOnly();
@@ -158,6 +163,7 @@ public class TCCFenceHandler {
     }
 
     /**
+     * tcc回滚方法增强
      * tcc rollback method enhanced
      *
      * @param rollbackMethod        rollback method
@@ -173,6 +179,7 @@ public class TCCFenceHandler {
         return transactionTemplate.execute(status -> {
             try {
                 Connection conn = DataSourceUtils.getConnection(dataSource);
+                // 查询TCC围栏对象
                 TCCFenceDO tccFenceDO = TCC_FENCE_DAO.queryTCCFenceDO(conn, xid, branchId);
                 // non_rollback
                 if (tccFenceDO == null) {
@@ -195,6 +202,7 @@ public class TCCFenceHandler {
                         return false;
                     }
                 }
+                // 更新TCC围栏状态并调用目标方法(rollback)
                 return updateStatusAndInvokeTargetMethod(conn, rollbackMethod, targetTCCBean, xid, branchId, TCCFenceConstant.STATUS_ROLLBACKED, status, args);
             } catch (Throwable t) {
                 status.setRollbackOnly();
@@ -222,6 +230,7 @@ public class TCCFenceHandler {
     }
 
     /**
+     * 更新TCC围栏状态并调用目标方法(commit/rollback)
      * Update TCC Fence status and invoke target method
      *
      * @param method                target method
@@ -235,9 +244,11 @@ public class TCCFenceHandler {
                                                              String xid, Long branchId, int status,
                                                              TransactionStatus transactionStatus,
                                                              Object[] args) throws Exception {
+        // 更新TCC围栏
         boolean result = TCC_FENCE_DAO.updateTCCFenceDO(conn, xid, branchId, status, TCCFenceConstant.STATUS_TRIED);
         if (result) {
             // invoke two phase method
+            // 如果TCC围栏更新成功, 则通过反射执行对应二阶段的业务方法(commit/rollback)
             Object ret = method.invoke(targetTCCBean, args);
             if (null != ret) {
                 if (ret instanceof TwoPhaseResult) {

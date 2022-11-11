@@ -19,11 +19,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.seata.core.protocol.RpcMessage;
 
 /**
+ * 远程处理器
  * The remoting processor
  * <p>
- * Used to encapsulate remote interaction logic.
- * In order to separate the processing business from netty.
- * When netty starts, it will register processors to abstractNettyRemoting#processorTable.
+ * Used to encapsulate remote interaction logic. 用于封装远程交互逻辑。
+ * In order to separate the processing business from netty. 为了将处理业务与netty分开。
+ * When netty starts, it will register processors to abstractNettyRemoting#processorTable. 当netty启动时，它会将处理器注册到abstractNettyRemoting # processorTable
  *
  * @author zhangchenghui.dev@gmail.com
  * @since 1.3.0
@@ -31,6 +32,7 @@ import io.seata.core.protocol.RpcMessage;
 public interface RemotingProcessor {
 
     /**
+     * 处理远程通道的消息
      * Process message
      *
      * @param ctx        Channel handler context.

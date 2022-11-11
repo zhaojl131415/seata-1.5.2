@@ -67,7 +67,7 @@ public interface Constants {
     String ACTION_NAME = "actionName";
 
     /**
-     * Use TCC fence
+     * Use TCC fence 使用TCC围栏
      */
     String USE_TCC_FENCE = "useTCCFence";
 

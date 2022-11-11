@@ -59,6 +59,11 @@ public class StatementProxy<T extends Statement> extends AbstractStatementProxy<
         return (ConnectionProxy) super.getConnectionProxy();
     }
 
+    /**
+     * seata对数据源到Statement都进行了代理，当执行SQL时，最终调用ExecuteTemplate.execute核心方法
+     * @return
+     * @throws SQLException
+     */
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
         this.targetSQL = sql;

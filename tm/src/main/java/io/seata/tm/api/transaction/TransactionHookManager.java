@@ -28,9 +28,13 @@ public final class TransactionHookManager {
 
     }
 
+    /**
+     * 线程本地缓存: 用于缓存当前线程下所有的事务hook集合
+     */
     private static final ThreadLocal<List<TransactionHook>> LOCAL_HOOKS = new ThreadLocal<>();
 
     /**
+     * 获取当前线程中所有的事务Hook
      * get the current hooks
      *
      * @return TransactionHook list
@@ -46,6 +50,7 @@ public final class TransactionHookManager {
     }
 
     /**
+     * 添加一个新的hook
      * add new hook
      *
      * @param transactionHook transactionHook
@@ -58,6 +63,7 @@ public final class TransactionHookManager {
         if (transactionHooks == null) {
             LOCAL_HOOKS.set(new ArrayList<>());
         }
+        // 将事务hook添加到本地线程缓存中
         LOCAL_HOOKS.get().add(transactionHook);
     }
 

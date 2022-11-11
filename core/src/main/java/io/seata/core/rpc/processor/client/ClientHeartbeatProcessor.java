@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * netty客户端心跳消息处理器: 用于执行事务协调者的心跳消息
  * process TC heartbeat message request(PONG)
  * <p>
  * process message type:

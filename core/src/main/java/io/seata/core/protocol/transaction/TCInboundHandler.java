@@ -18,6 +18,7 @@ package io.seata.core.protocol.transaction;
 import io.seata.core.rpc.RpcContext;
 
 /**
+ * 事务协调者入站处理器接口类
  * The interface Tc inbound handler.
  *
  * @author sharajava
@@ -25,6 +26,7 @@ import io.seata.core.rpc.RpcContext;
 public interface TCInboundHandler {
 
     /**
+     * 处理开启全局事务请求
      * Handle global begin response.
      *
      * @param globalBegin the global begin

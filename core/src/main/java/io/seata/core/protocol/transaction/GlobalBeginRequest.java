@@ -73,6 +73,9 @@ public class GlobalBeginRequest extends AbstractTransactionRequestToTC {
 
     @Override
     public AbstractTransactionResponse handle(RpcContext rpcContext) {
+        /**
+         * @see io.seata.server.AbstractTCInboundHandler#handle(GlobalBeginRequest, RpcContext)
+         */
         return handler.handle(this, rpcContext);
     }
 

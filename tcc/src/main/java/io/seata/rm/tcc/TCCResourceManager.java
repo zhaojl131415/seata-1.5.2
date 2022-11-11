@@ -71,6 +71,7 @@ public class TCCResourceManager extends AbstractResourceManager {
     }
 
     /**
+     * TCC模式 分支事务提交
      * TCC branch commit
      *
      * @param branchType
@@ -84,30 +85,36 @@ public class TCCResourceManager extends AbstractResourceManager {
     @Override
     public BranchStatus branchCommit(BranchType branchType, String xid, long branchId, String resourceId,
                                      String applicationData) throws TransactionException {
+        // 根据资源id获取TCC资源
         TCCResource tccResource = (TCCResource)tccResourceCache.get(resourceId);
         if (tccResource == null) {
             throw new ShouldNeverHappenException(String.format("TCC resource is not exist, resourceId: %s", resourceId));
         }
+        // 获取分支事务对应的目标Bean
         Object targetTCCBean = tccResource.getTargetBean();
+        // 获取分支事务资源对应的提交方法
         Method commitMethod = tccResource.getCommitMethod();
         if (targetTCCBean == null || commitMethod == null) {
             throw new ShouldNeverHappenException(String.format("TCC resource is not available, resourceId: %s", resourceId));
         }
         try {
-            //BusinessActionContext
+            //BusinessActionContext 获取业务执行的上下文
             BusinessActionContext businessActionContext = getBusinessActionContext(xid, branchId, resourceId,
                 applicationData);
+            // 获取第二阶段提交的参数
             Object[] args = this.getTwoPhaseCommitArgs(tccResource, businessActionContext);
             Object ret;
             boolean result;
-            // add idempotent and anti hanging
+            // add idempotent and anti hanging 添加幂等和防悬挂
             if (Boolean.TRUE.equals(businessActionContext.getActionContext(Constants.USE_TCC_FENCE))) {
                 try {
+                    // tcc围栏校验通过后, 通过反射调用执行提交方法
                     result = TCCFenceHandler.commitFence(commitMethod, targetTCCBean, xid, branchId, args);
                 } catch (SkipCallbackWrapperException | UndeclaredThrowableException e) {
                     throw e.getCause();
                 }
             } else {
+                // 通过反射调用执行提交方法
                 ret = commitMethod.invoke(targetTCCBean, args);
                 if (ret != null) {
                     if (ret instanceof TwoPhaseResult) {
@@ -129,6 +136,7 @@ public class TCCResourceManager extends AbstractResourceManager {
     }
 
     /**
+     * TCC模式 分支事务回滚
      * TCC branch rollback
      *
      * @param branchType      the branch type
@@ -147,6 +155,7 @@ public class TCCResourceManager extends AbstractResourceManager {
             throw new ShouldNeverHappenException(String.format("TCC resource is not exist, resourceId: %s", resourceId));
         }
         Object targetTCCBean = tccResource.getTargetBean();
+        // 获取分支事务资源对应的回滚方法
         Method rollbackMethod = tccResource.getRollbackMethod();
         if (targetTCCBean == null || rollbackMethod == null) {
             throw new ShouldNeverHappenException(String.format("TCC resource is not available, resourceId: %s", resourceId));
@@ -155,18 +164,21 @@ public class TCCResourceManager extends AbstractResourceManager {
             //BusinessActionContext
             BusinessActionContext businessActionContext = getBusinessActionContext(xid, branchId, resourceId,
                 applicationData);
+            // 获取二阶段回滚方法的参数
             Object[] args = this.getTwoPhaseRollbackArgs(tccResource, businessActionContext);
             Object ret;
             boolean result;
-            // add idempotent and anti hanging
+            // add idempotent and anti hanging 添加幂等和防悬挂
             if (Boolean.TRUE.equals(businessActionContext.getActionContext(Constants.USE_TCC_FENCE))) {
                 try {
+                    // tcc围栏校验通过后, 通过反射调用执行回滚方法
                     result = TCCFenceHandler.rollbackFence(rollbackMethod, targetTCCBean, xid, branchId,
                             args, tccResource.getActionName());
                 } catch (SkipCallbackWrapperException | UndeclaredThrowableException e) {
                     throw e.getCause();
                 }
             } else {
+                // 通过反射调用执行回滚方法
                 ret = rollbackMethod.invoke(targetTCCBean, args);
                 if (ret != null) {
                     if (ret instanceof TwoPhaseResult) {

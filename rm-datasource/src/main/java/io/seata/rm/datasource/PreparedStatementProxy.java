@@ -38,6 +38,7 @@ public class PreparedStatementProxy extends AbstractPreparedStatementProxy
     }
 
     /**
+     * 实例化一个新的PreparedStatement代理
      * Instantiates a new Prepared statement proxy.
      *
      * @param connectionProxy the connection proxy
@@ -50,6 +51,11 @@ public class PreparedStatementProxy extends AbstractPreparedStatementProxy
         super(connectionProxy, targetStatement, targetSQL);
     }
 
+    /**
+     * seata对数据源到PreparedStatement都进行了代理，当执行SQL时，最终调用ExecuteTemplate.execute核心方法
+     * @return
+     * @throws SQLException
+     */
     @Override
     public boolean execute() throws SQLException {
         return ExecuteTemplate.execute(this, (statement, args) -> statement.execute());

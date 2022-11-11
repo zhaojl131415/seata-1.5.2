@@ -155,6 +155,10 @@ public class BranchReportRequest extends AbstractTransactionRequestToTC {
 
     @Override
     public AbstractTransactionResponse handle(RpcContext rpcContext) {
+        /**
+         * 处理分支事务上报结果
+         * @see io.seata.server.AbstractTCInboundHandler#handle(BranchReportRequest, RpcContext)
+         */
         return handler.handle(this, rpcContext);
     }
 

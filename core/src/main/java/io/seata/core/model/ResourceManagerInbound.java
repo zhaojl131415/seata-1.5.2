@@ -18,6 +18,7 @@ package io.seata.core.model;
 import io.seata.core.exception.TransactionException;
 
 /**
+ * 咨询管理器 入站接口: 用于控制分支事务的提交或者回滚
  * Resource Manager.
  *
  * Control a branch transaction commit or rollback.
@@ -27,6 +28,7 @@ import io.seata.core.exception.TransactionException;
 public interface ResourceManagerInbound {
 
     /**
+     * 提交分支事务
      * Commit a branch transaction.
      *
      * @param branchType      the branch type
@@ -41,6 +43,7 @@ public interface ResourceManagerInbound {
     BranchStatus branchCommit(BranchType branchType, String xid, long branchId, String resourceId, String applicationData) throws TransactionException;
 
     /**
+     * 回滚分支事务
      * Rollback a branch transaction.
      *
      * @param branchType      the branch type

@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * 带数据源缓存的抽象资源管理器
  * Abstract RM with DataSource Cache.
  *
  * @author sharajava

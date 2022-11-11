@@ -29,9 +29,12 @@ import io.seata.core.protocol.MessageTypeAware;
 import io.seata.core.protocol.ProtocolConstants;
 import io.seata.core.protocol.RpcMessage;
 import io.seata.core.rpc.Disposable;
+import io.seata.core.rpc.ShutdownHook;
 import io.seata.core.rpc.hook.RpcHook;
 import io.seata.core.rpc.processor.Pair;
 import io.seata.core.rpc.processor.RemotingProcessor;
+import io.seata.core.rpc.processor.client.*;
+import io.seata.core.rpc.processor.server.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -97,6 +100,7 @@ public abstract class AbstractNettyRemoting implements Disposable {
     private String group = "DEFAULT";
 
     /**
+     * 这个容器容纳所有处理器
      * This container holds all processors.
      * processor type {@link MessageType}
      */
@@ -258,6 +262,7 @@ public abstract class AbstractNettyRemoting implements Disposable {
     boolean allowDumpStack = false;
 
     /**
+     * 服务端/客户端 处理netty消息 公用方法
      * Rpc message processing.
      *
      * @param ctx        Channel handler context.
@@ -278,6 +283,32 @@ public abstract class AbstractNettyRemoting implements Disposable {
                     try {
                         pair.getSecond().execute(() -> {
                             try {
+                                /**
+                                 * 链式执行netty通道消息
+                                 * -------------------------------netty服务端-------------------------------
+                                 * 服务端用来处理 RM/TM客户端请求消息 的处理器
+                                 * @see ServerOnRequestProcessor#process(ChannelHandlerContext, RpcMessage)
+                                 * 服务端用来处理 RM/TM响应消息处理器 的处理器
+                                 * @see ServerOnResponseProcessor#process(ChannelHandlerContext, RpcMessage)
+                                 * 服务端用来处理 RM客户端注册消息 的处理器
+                                 * @see RegRmProcessor#process(ChannelHandlerContext, RpcMessage)
+                                 * 服务端用来处理 TM客户端注册消息 的处理器
+                                 * @see RegTmProcessor#process(ChannelHandlerContext, RpcMessage)
+                                 * 服务端心跳消息处理器
+                                 * @see ServerHeartbeatProcessor#process(ChannelHandlerContext, RpcMessage)
+                                 *
+                                 * -------------------------------netty客户端-------------------------------
+                                 * 资源管理器分支事务提交处理器
+                                 * @see RmBranchCommitProcessor#process(ChannelHandlerContext, RpcMessage)
+                                 * 资源管理器分支事务回滚处理器
+                                 * @see RmBranchRollbackProcessor#process(ChannelHandlerContext, RpcMessage)
+                                 * 资源管理器分支事务UndoLog删除处理器
+                                 * @see RmUndoLogProcessor#process(ChannelHandlerContext, RpcMessage)
+                                 * 客户端处理事务协调者响应处理器
+                                 * @see ClientOnResponseProcessor#process(ChannelHandlerContext, RpcMessage)
+                                 * 客户端心跳消息处理器
+                                 * @see ClientHeartbeatProcessor#process(ChannelHandlerContext, RpcMessage)
+                                 */
                                 pair.getFirst().process(ctx, rpcMessage);
                             } catch (Throwable th) {
                                 LOGGER.error(FrameworkErrorCode.NetDispatch.getErrCode(), th.getMessage(), th);

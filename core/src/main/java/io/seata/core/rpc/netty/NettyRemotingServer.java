@@ -55,9 +55,10 @@ public class NettyRemotingServer extends AbstractNettyRemotingServer {
 
     @Override
     public void init() {
-        // registry processor
+        // registry processor 注册处理器
         registerProcessor();
         if (initialized.compareAndSet(false, true)) {
+            // netty服务端启动
             super.init();
         }
     }
@@ -68,6 +69,10 @@ public class NettyRemotingServer extends AbstractNettyRemotingServer {
      * @param messageExecutor   the message executor
      */
     public NettyRemotingServer(ThreadPoolExecutor messageExecutor) {
+        /**
+         * 1.实例化netty服务端
+         * 2.指定netty服务端通道处理器
+         */
         super(messageExecutor, new NettyServerConfig());
     }
 
@@ -112,10 +117,10 @@ public class NettyRemotingServer extends AbstractNettyRemotingServer {
             new ServerOnResponseProcessor(getHandler(), getFutures());
         super.registerProcessor(MessageType.TYPE_BRANCH_COMMIT_RESULT, onResponseProcessor, branchResultMessageExecutor);
         super.registerProcessor(MessageType.TYPE_BRANCH_ROLLBACK_RESULT, onResponseProcessor, branchResultMessageExecutor);
-        // 3. registry rm message processor
+        // 3. registry rm message processor 注册 资源管理器注册处理器
         RegRmProcessor regRmProcessor = new RegRmProcessor(this);
         super.registerProcessor(MessageType.TYPE_REG_RM, regRmProcessor, messageExecutor);
-        // 4. registry tm message processor
+        // 4. registry tm message processor 注册
         RegTmProcessor regTmProcessor = new RegTmProcessor(this);
         super.registerProcessor(MessageType.TYPE_REG_CLT, regTmProcessor, null);
         // 5. registry heartbeat message processor

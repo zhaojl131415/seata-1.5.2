@@ -27,6 +27,7 @@ import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.core.annotation.AliasFor;
 
 /**
+ * 全局事务注解
  * The interface Global transactional.
  *
  * @author slievrly

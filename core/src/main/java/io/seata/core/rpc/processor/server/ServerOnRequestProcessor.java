@@ -65,6 +65,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 服务端用来处理 RM/TM客户端请求消息 的处理器
  * process RM/TM client request message.
  * <p>
  * message type:
@@ -117,9 +118,17 @@ public class ServerOnRequestProcessor implements RemotingProcessor, Disposable {
         }
     }
 
+    /**
+     * 处理 RM/TM客户端请求消息
+     * @param ctx        Channel handler context.
+     * @param rpcMessage rpc message.
+     * @throws Exception
+     */
     @Override
     public void process(ChannelHandlerContext ctx, RpcMessage rpcMessage) throws Exception {
+        // 判断通道是否存在
         if (ChannelManager.isRegistered(ctx.channel())) {
+            // 处理 RM/TM客户端请求消息
             onRequestMessage(ctx, rpcMessage);
         } else {
             try {
@@ -144,6 +153,11 @@ public class ServerOnRequestProcessor implements RemotingProcessor, Disposable {
         }
     }
 
+    /**
+     * 处理 RM/TM客户端请求消息
+     * @param ctx
+     * @param rpcMessage
+     */
     private void onRequestMessage(ChannelHandlerContext ctx, RpcMessage rpcMessage) {
         Object message = rpcMessage.getBody();
         RpcContext rpcContext = ChannelManager.getContextFromIdentified(ctx.channel());
@@ -162,25 +176,31 @@ public class ServerOnRequestProcessor implements RemotingProcessor, Disposable {
         if (!(message instanceof AbstractMessage)) {
             return;
         }
-        // the batch send request message
+        // the batch send request message 批量发送过来的请求消息
         if (message instanceof MergedWarpMessage) {
+            // seata客户端版本是否大于或等于1.5.0
             if (NettyServerConfig.isEnableTcServerBatchSendResponse() && StringUtils.isNotBlank(rpcContext.getVersion())
                 && Version.isAboveOrEqualVersion150(rpcContext.getVersion())) {
                 List<AbstractMessage> msgs = ((MergedWarpMessage)message).msgs;
                 List<Integer> msgIds = ((MergedWarpMessage)message).msgIds;
+                // 遍历合并消息
                 for (int i = 0; i < msgs.size(); i++) {
                     AbstractMessage msg = msgs.get(i);
                     int msgId = msgIds.get(i);
+                    // 是否并发请求处理
                     if (PARALLEL_REQUEST_HANDLE) {
                         CompletableFuture.runAsync(
+                                // 事务协调者处理请求消息 1.5.0版本
                             () -> handleRequestsByMergedWarpMessageBy150(msg, msgId, rpcMessage, ctx, rpcContext));
                     } else {
+                        // 事务协调者处理请求消息 1.5.0版本
                         handleRequestsByMergedWarpMessageBy150(msg, msgId, rpcMessage, ctx, rpcContext);
                     }
                 }
             } else {
                 List<AbstractResultMessage> results = new CopyOnWriteArrayList<>();
                 List<CompletableFuture<Void>> completableFutures = null;
+                // 遍历合并消息
                 for (int i = 0; i < ((MergedWarpMessage)message).msgs.size(); i++) {
                     if (PARALLEL_REQUEST_HANDLE) {
                         if (completableFutures == null) {
@@ -188,11 +208,13 @@ public class ServerOnRequestProcessor implements RemotingProcessor, Disposable {
                         }
                         int finalI = i;
                         completableFutures.add(CompletableFuture.runAsync(() -> {
+                            // 事务协调者处理请求消息
                             results.add(finalI, handleRequestsByMergedWarpMessage(
                                 ((MergedWarpMessage)message).msgs.get(finalI), rpcContext));
                         }));
                     } else {
                         results.add(i,
+                            // 事务协调者处理请求消息
                             handleRequestsByMergedWarpMessage(((MergedWarpMessage)message).msgs.get(i), rpcContext));
                     }
                 }
@@ -208,8 +230,12 @@ public class ServerOnRequestProcessor implements RemotingProcessor, Disposable {
                 remotingServer.sendAsyncResponse(rpcMessage, ctx.channel(), resultMessage);
             }
         } else {
-            // the single send request message
+            // the single send request message 单次发送请求消息
             final AbstractMessage msg = (AbstractMessage) message;
+            /**
+             * 事务协调者处理消息
+             * @see io.seata.server.coordinator.DefaultCoordinator#onRequest(AbstractMessage, RpcContext)
+             */
             AbstractResultMessage result = transactionMessageHandler.onRequest(msg, rpcContext);
             remotingServer.sendAsyncResponse(rpcMessage, ctx.channel(), result);
         }
@@ -282,6 +308,10 @@ public class ServerOnRequestProcessor implements RemotingProcessor, Disposable {
      * @param rpcContext rpcContext
      */
     private AbstractResultMessage handleRequestsByMergedWarpMessage(AbstractMessage subMessage, RpcContext rpcContext) {
+        /**
+         * 事务协调者处理请求消息
+         * @see io.seata.server.coordinator.DefaultCoordinator#onRequest(AbstractMessage, RpcContext)
+         */
         return transactionMessageHandler.onRequest(subMessage, rpcContext);
     }
 
@@ -295,6 +325,10 @@ public class ServerOnRequestProcessor implements RemotingProcessor, Disposable {
      */
     private void handleRequestsByMergedWarpMessageBy150(AbstractMessage msg, int msgId, RpcMessage rpcMessage,
         ChannelHandlerContext ctx, RpcContext rpcContext) {
+        /**
+         * 事务协调者处理请求消息
+         * @see io.seata.server.coordinator.DefaultCoordinator#onRequest(AbstractMessage, RpcContext)
+         */
         AbstractResultMessage resultMessage = transactionMessageHandler.onRequest(msg, rpcContext);
         BlockingQueue<QueueItem> msgQueue = computeIfAbsentMsgQueue(ctx.channel());
         offerMsg(msgQueue, rpcMessage, resultMessage, msgId, ctx.channel());

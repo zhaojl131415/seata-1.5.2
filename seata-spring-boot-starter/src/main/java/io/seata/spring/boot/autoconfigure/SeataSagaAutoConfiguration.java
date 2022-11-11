@@ -42,6 +42,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolExecutorFactoryBean;
 
 /**
+ * Saga模式自动配置
  * Saga auto configuration.
  *
  * @author wang.liang
@@ -81,6 +82,7 @@ public class SeataSagaAutoConfiguration {
     }
 
     /**
+     * 创建状态机引擎bean
      * Create state machine engine bean.
      */
     @Bean

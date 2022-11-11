@@ -53,6 +53,7 @@ public class ActionInterceptorHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ActionInterceptorHandler.class);
 
     /**
+     * 处理TCC切面
      * Handler the TCC Aspect
      *
      * @param method         the method
@@ -89,7 +90,7 @@ public class ActionInterceptorHandler {
 
             if (businessAction.useTCCFence()) {
                 try {
-                    // Use TCC Fence, and return the business result
+                    // Use TCC Fence, and return the business result 使用TCC围栏，返回业务结果
                     return TCCFenceHandler.prepareFence(xid, Long.valueOf(branchId), actionName, targetCallback);
                 } catch (SkipCallbackWrapperException | UndeclaredThrowableException e) {
                     Throwable originException = e.getCause();

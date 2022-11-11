@@ -16,14 +16,17 @@
 package io.seata.core.rpc.processor.client;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.seata.core.protocol.AbstractMessage;
 import io.seata.core.protocol.RpcMessage;
 import io.seata.core.protocol.transaction.UndoLogDeleteRequest;
+import io.seata.core.rpc.RpcContext;
 import io.seata.core.rpc.TransactionMessageHandler;
 import io.seata.core.rpc.processor.RemotingProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 执行事务协调者的删除UndoLog命令: 消息类型: UndoLogDeleteRequest
  * process TC undo log delete command.
  * <p>
  * process message type:
@@ -48,11 +51,16 @@ public class RmUndoLogProcessor implements RemotingProcessor {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("rm handle undo log process:" + msg);
         }
+        // 处理分支事务删除UndoLog
         handleUndoLogDelete((UndoLogDeleteRequest) msg);
     }
 
     private void handleUndoLogDelete(UndoLogDeleteRequest undoLogDeleteRequest) {
         try {
+            /**
+             * 调用资源管理器处理分支事务删除UndoLog请求
+             * @see io.seata.rm.AbstractRMHandler#onRequest(AbstractMessage, RpcContext)
+             */
             handler.onRequest(undoLogDeleteRequest, null);
         } catch (Exception e) {
             LOGGER.error("Failed to delete undo log by undoLogDeleteRequest on" + undoLogDeleteRequest.getResourceId());

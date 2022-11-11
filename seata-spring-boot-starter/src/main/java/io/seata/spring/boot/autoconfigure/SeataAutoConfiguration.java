@@ -18,11 +18,14 @@ package io.seata.spring.boot.autoconfigure;
 import java.util.List;
 
 import io.seata.common.loader.EnhancedServiceLoader;
+import io.seata.spring.annotation.AspectTransactional;
 import io.seata.spring.annotation.GlobalTransactionScanner;
+import io.seata.spring.annotation.GlobalTransactionalInterceptor;
 import io.seata.spring.annotation.ScannerChecker;
 import io.seata.spring.boot.autoconfigure.properties.SeataProperties;
 import io.seata.tm.api.DefaultFailureHandlerImpl;
 import io.seata.tm.api.FailureHandler;
+import org.aopalliance.intercept.MethodInvocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +41,7 @@ import static io.seata.common.Constants.BEAN_NAME_SPRING_APPLICATION_CONTEXT_PRO
 import static io.seata.spring.boot.autoconfigure.StarterConstants.SEATA_PREFIX;
 
 /**
+ * seata自动配置类
  * The type Seata auto configuration
  *
  * @author xingfudeshi@gmail.com
@@ -53,6 +57,18 @@ public class SeataAutoConfiguration {
         return new DefaultFailureHandlerImpl();
     }
 
+    /**
+     * 注入全局事务扫描器{@link GlobalTransactionScanner}
+     * 1. TM、RM注册
+     * 2.引入全局事务拦截器{@link GlobalTransactionalInterceptor}
+     * 3.客户端请求时调用拦截器invoke方法，发起全局事务
+     *
+     * @param seataProperties
+     * @param failureHandler
+     * @param beanFactory
+     * @param scannerCheckers
+     * @return
+     */
     @Bean
     @DependsOn({BEAN_NAME_SPRING_APPLICATION_CONTEXT_PROVIDER, BEAN_NAME_FAILURE_HANDLER})
     @ConditionalOnMissingBean(GlobalTransactionScanner.class)
@@ -79,7 +95,7 @@ public class SeataAutoConfiguration {
         //set accessKey and secretKey
         GlobalTransactionScanner.setAccessKey(seataProperties.getAccessKey());
         GlobalTransactionScanner.setSecretKey(seataProperties.getSecretKey());
-        // create global transaction scanner
+        // create global transaction scanner 构建全局扫描器，传入参数：应用名、事务分组名，失败处理器
         return new GlobalTransactionScanner(seataProperties.getApplicationId(), seataProperties.getTxServiceGroup(), failureHandler);
     }
 }

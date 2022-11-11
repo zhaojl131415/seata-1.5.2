@@ -24,11 +24,13 @@ package io.seata.core.protocol.transaction;
 public abstract class AbstractTransactionRequestToRM extends AbstractTransactionRequest {
 
     /**
+     * 资源管理器入站处理器
      * The Handler.
      */
     protected RMInboundHandler handler;
 
     /**
+     * 指定资源管理器入站处理器
      * Sets rm inbound message handler.
      *
      * @param handler the handler

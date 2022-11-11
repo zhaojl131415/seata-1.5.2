@@ -17,16 +17,19 @@ package io.seata.core.rpc.processor.client;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.seata.common.util.NetUtil;
+import io.seata.core.protocol.AbstractMessage;
 import io.seata.core.protocol.RpcMessage;
 import io.seata.core.protocol.transaction.BranchCommitRequest;
 import io.seata.core.protocol.transaction.BranchCommitResponse;
 import io.seata.core.rpc.RemotingClient;
+import io.seata.core.rpc.RpcContext;
 import io.seata.core.rpc.TransactionMessageHandler;
 import io.seata.core.rpc.processor.RemotingProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 执行事务协调者的全局提交命令: 消息类型: BranchCommitRequest
  * process TC global commit command.
  * <p>
  * process message type:
@@ -48,6 +51,12 @@ public class RmBranchCommitProcessor implements RemotingProcessor {
         this.remotingClient = remotingClient;
     }
 
+    /**
+     * 分支事务接到事务协调者的提交命令, 处理提交
+     * @param ctx        Channel handler context.
+     * @param rpcMessage rpc message.
+     * @throws Exception
+     */
     @Override
     public void process(ChannelHandlerContext ctx, RpcMessage rpcMessage) throws Exception {
         String remoteAddress = NetUtil.toStringAddress(ctx.channel().remoteAddress());
@@ -55,11 +64,16 @@ public class RmBranchCommitProcessor implements RemotingProcessor {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("rm client handle branch commit process:" + msg);
         }
+        // 处理分支事务提交
         handleBranchCommit(rpcMessage, remoteAddress, (BranchCommitRequest) msg);
     }
 
     private void handleBranchCommit(RpcMessage request, String serverAddress, BranchCommitRequest branchCommitRequest) {
         BranchCommitResponse resultMessage;
+        /**
+         * 调用资源管理器处理分支事务提交请求
+         * @see io.seata.rm.AbstractRMHandler#onRequest(AbstractMessage, RpcContext)
+         */
         resultMessage = (BranchCommitResponse) handler.onRequest(branchCommitRequest, null);
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("branch commit result:" + resultMessage);

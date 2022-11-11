@@ -37,6 +37,7 @@ import io.seata.server.session.BranchSession;
 import io.seata.server.session.GlobalSession;
 import io.seata.server.session.SessionHelper;
 import io.seata.server.session.SessionHolder;
+import io.seata.server.transaction.at.ATCore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -80,8 +81,17 @@ public abstract class AbstractCore implements Core {
             BranchSession branchSession = SessionHelper.newBranchByGlobal(globalSession, branchType, resourceId,
                     applicationData, lockKeys, clientId);
             MDC.put(RootContext.MDC_KEY_BRANCH_ID, String.valueOf(branchSession.getBranchId()));
+            /**
+             * 分支事务会话加锁
+             * AT模式
+             * @see ATCore#branchSessionLock(GlobalSession, BranchSession)
+             */
             branchSessionLock(globalSession, branchSession);
             try {
+                /**
+                 * 将分支事务会话, 加入到全局事务会话中
+                 * @see GlobalSession#addBranch(BranchSession)
+                 */
                 globalSession.addBranch(branchSession);
             } catch (RuntimeException ex) {
                 branchSessionUnlock(branchSession);
@@ -131,7 +141,9 @@ public abstract class AbstractCore implements Core {
     @Override
     public void branchReport(BranchType branchType, String xid, long branchId, BranchStatus status,
                              String applicationData) throws TransactionException {
+        // 获取对应全局事务
         GlobalSession globalSession = assertGlobalSessionNotNull(xid, true);
+        // 获取对应分支事务
         BranchSession branchSession = globalSession.getBranch(branchId);
         if (branchSession == null) {
             throw new BranchTransactionException(BranchTransactionNotExist,
@@ -139,6 +151,9 @@ public abstract class AbstractCore implements Core {
         }
         branchSession.setApplicationData(applicationData);
         globalSession.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
+        /**
+         * 根据分支事务上报的结果
+         */
         globalSession.changeBranchStatus(branchSession, status);
 
         if (LOGGER.isInfoEnabled()) {
@@ -186,6 +201,7 @@ public abstract class AbstractCore implements Core {
             request.setResourceId(branchSession.getResourceId());
             request.setApplicationData(branchSession.getApplicationData());
             request.setBranchType(branchSession.getBranchType());
+            // 给分支事务发送回滚请求
             return branchRollbackSend(request, globalSession, branchSession);
         } catch (IOException | TimeoutException e) {
             throw new BranchTransactionException(FailedToSendBranchRollbackRequest,
@@ -194,8 +210,21 @@ public abstract class AbstractCore implements Core {
         }
     }
 
+    /**
+     * 给分支事务发送回滚请求
+     * @param request
+     * @param globalSession
+     * @param branchSession
+     * @return
+     * @throws IOException
+     * @throws TimeoutException
+     */
     protected BranchStatus branchRollbackSend(BranchRollbackRequest request, GlobalSession globalSession,
                                               BranchSession branchSession) throws IOException, TimeoutException {
+        /**
+         * 通过远程服务给分支事务发送异步回滚请求
+         * 底层Netty实现
+         */
         BranchRollbackResponse response = (BranchRollbackResponse) remotingServer.sendSyncRequest(
                 branchSession.getResourceId(), branchSession.getClientId(), request);
         return response.getBranchStatus();

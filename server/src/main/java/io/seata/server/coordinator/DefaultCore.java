@@ -99,6 +99,9 @@ public class DefaultCore implements Core {
     @Override
     public Long branchRegister(BranchType branchType, String resourceId, String clientId, String xid,
                                String applicationData, String lockKeys) throws TransactionException {
+        /**
+         * @see AbstractCore#branchRegister(BranchType, String, String, String, String, String)
+         */
         return getCore(branchType).branchRegister(branchType, resourceId, clientId, xid,
             applicationData, lockKeys);
     }
@@ -106,6 +109,9 @@ public class DefaultCore implements Core {
     @Override
     public void branchReport(BranchType branchType, String xid, long branchId, BranchStatus status,
                              String applicationData) throws TransactionException {
+        /**
+         * @see AbstractCore#branchReport(BranchType, String, long, BranchStatus, String)
+         */
         getCore(branchType).branchReport(branchType, xid, branchId, status, applicationData);
     }
 
@@ -122,20 +128,35 @@ public class DefaultCore implements Core {
 
     @Override
     public BranchStatus branchRollback(GlobalSession globalSession, BranchSession branchSession) throws TransactionException {
+        /**
+         * 给分支事务发送回滚请求
+         * @see AbstractCore#branchRollback(GlobalSession, BranchSession)
+         */
         return getCore(branchSession.getBranchType()).branchRollback(globalSession, branchSession);
     }
 
+    /**
+     * 开启全局事务, 并返回事务id: XID
+     * @param applicationId           ID of the application who begins this transaction.
+     * @param transactionServiceGroup ID of the transaction service group.
+     * @param name                    Give a name to the global transaction.
+     * @param timeout                 Timeout of the global transaction.
+     * @return
+     * @throws TransactionException
+     */
     @Override
     public String begin(String applicationId, String transactionServiceGroup, String name, int timeout)
         throws TransactionException {
+        // 创建全局会话
         GlobalSession session = GlobalSession.createGlobalSession(applicationId, transactionServiceGroup, name,
             timeout);
         MDC.put(RootContext.MDC_KEY_XID, session.getXid());
+        // 添加会话生命周期监听器
         session.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
-
+        // 开启会话
         session.begin();
 
-        // transaction start event
+        // transaction start event 发布事务开启事件
         MetricsPublisher.postSessionDoingEvent(session, false);
 
         return session.getXid();
@@ -265,6 +286,12 @@ public class DefaultCore implements Core {
         return success;
     }
 
+    /**
+     * 全局事务回滚
+     * @param xid XID of the global transaction
+     * @return
+     * @throws TransactionException
+     */
     @Override
     public GlobalStatus rollback(String xid) throws TransactionException {
         GlobalSession globalSession = SessionHolder.findGlobalSession(xid);
@@ -284,7 +311,7 @@ public class DefaultCore implements Core {
         if (!shouldRollBack) {
             return globalSession.getStatus();
         }
-        
+        // 执行全局事务回滚
         boolean rollbackSuccess = doGlobalRollback(globalSession, false);
         return rollbackSuccess ? GlobalStatus.Rollbacked : globalSession.getStatus();
     }
@@ -296,6 +323,7 @@ public class DefaultCore implements Core {
         MetricsPublisher.postSessionDoingEvent(globalSession, retrying);
 
         if (globalSession.isSaga()) {
+            // SAGA模式回滚
             success = getCore(BranchType.SAGA).doGlobalRollback(globalSession, retrying);
         } else {
             Boolean result = SessionHelper.forEach(globalSession.getReverseSortedBranches(), branchSession -> {
@@ -305,6 +333,7 @@ public class DefaultCore implements Core {
                     return CONTINUE;
                 }
                 try {
+                    // 遍历所有分支事务, 远程发送分支事务回滚请求
                     BranchStatus branchStatus = branchRollback(globalSession, branchSession);
                     if (isXaerNotaTimeout(globalSession, branchStatus)) {
                         LOGGER.info("Rollback branch XAER_NOTA retry timeout, xid = {} branchId = {}", globalSession.getXid(), branchSession.getBranchId());

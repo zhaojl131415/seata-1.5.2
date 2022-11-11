@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
+ * 服务端用来处理 RM/TM响应消息处理器 的处理器
  * handle RM/TM response message.
  * <p>
  * process message type:

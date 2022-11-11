@@ -48,6 +48,7 @@ public abstract class AbstractConnectionProxyXA implements Connection {
 
     public static final String SQLSTATE_XA_NOT_END = "SQLSTATE_XA_NOT_END";
 
+    /** 原始连接 */
     protected Connection originalConnection;
 
     protected XAConnection xaConnection;

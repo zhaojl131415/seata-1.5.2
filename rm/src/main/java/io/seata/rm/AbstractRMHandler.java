@@ -22,19 +22,14 @@ import io.seata.core.model.BranchType;
 import io.seata.core.model.ResourceManager;
 import io.seata.core.protocol.AbstractMessage;
 import io.seata.core.protocol.AbstractResultMessage;
-import io.seata.core.protocol.transaction.AbstractTransactionRequestToRM;
-import io.seata.core.protocol.transaction.BranchCommitRequest;
-import io.seata.core.protocol.transaction.BranchCommitResponse;
-import io.seata.core.protocol.transaction.BranchRollbackRequest;
-import io.seata.core.protocol.transaction.BranchRollbackResponse;
-import io.seata.core.protocol.transaction.RMInboundHandler;
-import io.seata.core.protocol.transaction.UndoLogDeleteRequest;
+import io.seata.core.protocol.transaction.*;
 import io.seata.core.rpc.RpcContext;
 import io.seata.core.rpc.TransactionMessageHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 抽象资源管理器事件处理器
  * The Abstract RM event handler
  *
  * @author sharajava
@@ -44,6 +39,11 @@ public abstract class AbstractRMHandler extends AbstractExceptionHandler
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractRMHandler.class);
 
+    /**
+     * 处理分支事务提交请求
+     * @param request the request
+     * @return
+     */
     @Override
     public BranchCommitResponse handle(BranchCommitRequest request) {
         BranchCommitResponse response = new BranchCommitResponse();
@@ -51,12 +51,20 @@ public abstract class AbstractRMHandler extends AbstractExceptionHandler
             @Override
             public void execute(BranchCommitRequest request, BranchCommitResponse response)
                 throws TransactionException {
+                /**
+                 * 处理分支事务提交
+                 */
                 doBranchCommit(request, response);
             }
         }, request, response);
         return response;
     }
 
+    /**
+     * 处理分支事务回滚请求
+     * @param request the request
+     * @return
+     */
     @Override
     public BranchRollbackResponse handle(BranchRollbackRequest request) {
         BranchRollbackResponse response = new BranchRollbackResponse();
@@ -64,6 +72,9 @@ public abstract class AbstractRMHandler extends AbstractExceptionHandler
             @Override
             public void execute(BranchRollbackRequest request, BranchRollbackResponse response)
                 throws TransactionException {
+                /**
+                 * 处理分支事务回滚
+                 */
                 doBranchRollback(request, response);
             }
         }, request, response);
@@ -80,6 +91,7 @@ public abstract class AbstractRMHandler extends AbstractExceptionHandler
     }
 
     /**
+     * 执行分支事务提交
      * Do branch commit.
      *
      * @param request  the request
@@ -95,6 +107,16 @@ public abstract class AbstractRMHandler extends AbstractExceptionHandler
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Branch committing: " + xid + " " + branchId + " " + resourceId + " " + applicationData);
         }
+        /**
+         * 执行分支事务提交
+         *
+         * XA模式
+         * @see io.seata.rm.datasource.xa.ResourceManagerXA#branchCommit(BranchType, String, long, String, String)
+         * SAGA模式
+         * @see io.seata.saga.rm.SagaResourceManager#branchCommit(BranchType, String, long, String, String)
+         * TCC模式
+         * @see io.seata.rm.tcc.TCCResourceManager#branchCommit(BranchType, String, long, String, String)
+         */
         BranchStatus status = getResourceManager().branchCommit(request.getBranchType(), xid, branchId, resourceId,
             applicationData);
         response.setXid(xid);
@@ -107,6 +129,7 @@ public abstract class AbstractRMHandler extends AbstractExceptionHandler
     }
 
     /**
+     * 执行分支事务回滚
      * Do branch rollback.
      *
      * @param request  the request
@@ -122,6 +145,16 @@ public abstract class AbstractRMHandler extends AbstractExceptionHandler
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Branch Rollbacking: " + xid + " " + branchId + " " + resourceId);
         }
+        /**
+         * 执行分支事务回滚
+         *
+         * XA模式
+         * @see io.seata.rm.datasource.xa.ResourceManagerXA#branchRollback(BranchType, String, long, String, String)
+         * SAGA模式
+         * @see io.seata.saga.rm.SagaResourceManager#branchRollback(BranchType, String, long, String, String)
+         * TCC模式
+         * @see io.seata.rm.tcc.TCCResourceManager#branchRollback(BranchType, String, long, String, String)
+         */
         BranchStatus status = getResourceManager().branchRollback(request.getBranchType(), xid, branchId, resourceId,
             applicationData);
         response.setXid(xid);
@@ -139,14 +172,31 @@ public abstract class AbstractRMHandler extends AbstractExceptionHandler
      */
     protected abstract ResourceManager getResourceManager();
 
+    /**
+     * 处理咨询管理器请求
+     * @param request received request message
+     * @param context context of the RPC
+     * @return
+     */
     @Override
     public AbstractResultMessage onRequest(AbstractMessage request, RpcContext context) {
         if (!(request instanceof AbstractTransactionRequestToRM)) {
             throw new IllegalArgumentException();
         }
         AbstractTransactionRequestToRM transactionRequest = (AbstractTransactionRequestToRM)request;
+        // 指定 事务请求的资源管理器入站消息处理器 为 当前资源管理器处理器
         transactionRequest.setRMInboundMessageHandler(this);
-
+        /**
+         * 根据不同的事务请求, 执行不同的处理: 策略模式
+         * 分支事务提交请求
+         * @see BranchCommitRequest#handle(RpcContext)
+         * 分支事务回滚请求
+         * @see BranchRollbackRequest#handle(RpcContext)
+         *
+         * ------------------undo log------------------
+         * UndoLog删除请求
+         * @see UndoLogDeleteRequest#handle(RpcContext)
+         */
         return transactionRequest.handle(context);
     }
 

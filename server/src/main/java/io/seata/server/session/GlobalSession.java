@@ -93,8 +93,10 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
 
     private volatile boolean active = true;
 
+    /** 用于存储所有分式事务会话的集合 */
     private List<BranchSession> branchSessions;
 
+    /** 全局事务会话 */
     private GlobalSessionLock globalSessionLock = new GlobalSessionLock();
 
 
@@ -123,6 +125,7 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
         return branchSessions.remove(branchSession);
     }
 
+    /** 生命周期监听器集合 */
     private Set<SessionLifecycleListener> lifecycleListeners = new HashSet<>();
 
     /**
@@ -193,6 +196,10 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
         this.beginTime = System.currentTimeMillis();
         this.active = true;
         for (SessionLifecycleListener lifecycleListener : lifecycleListeners) {
+            /**
+             * 新增全局事务会话: 持久化
+             * @see AbstractSessionManager#onBegin(GlobalSession)
+             */
             lifecycleListener.onBegin(this);
         }
     }
@@ -204,6 +211,10 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
         }
         this.status = status;
         for (SessionLifecycleListener lifecycleListener : lifecycleListeners) {
+            /**
+             * 修改全局事务会话
+             * @see AbstractSessionManager#onStatusChange(GlobalSession, GlobalStatus)
+             */
             lifecycleListener.onStatusChange(this, status);
         }
     }
@@ -212,6 +223,7 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
     public void changeBranchStatus(BranchSession branchSession, BranchStatus status)
         throws TransactionException {
         branchSession.setStatus(status);
+        // 遍历生命周期监听器,
         for (SessionLifecycleListener lifecycleListener : lifecycleListeners) {
             lifecycleListener.onBranchStatusChange(this, branchSession, status);
         }
@@ -273,6 +285,7 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
     }
 
     /**
+     * 增加全局事务会话生命周期监听器
      * Add session lifecycle listener.
      *
      * @param sessionLifecycleListener the session lifecycle listener
@@ -292,10 +305,12 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
 
     @Override
     public void addBranch(BranchSession branchSession) throws TransactionException {
+        // 遍历生命周期监听器:
         for (SessionLifecycleListener lifecycleListener : lifecycleListeners) {
             lifecycleListener.onAddBranch(this, branchSession);
         }
         branchSession.setStatus(BranchStatus.Registered);
+        // 将分支事务会话加入到全局会话下的缓存集合中
         add(branchSession);
     }
 

@@ -26,6 +26,7 @@ import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.IntroductionInfo;
 
 /**
+ * Seata自动数据源代理拦截器
  * @author xingfudeshi@gmail.com
  * @author selfishlover
  */
@@ -42,6 +43,12 @@ public class SeataAutoDataSourceProxyAdvice implements MethodInterceptor, Introd
         RootContext.setDefaultBranchType(this.branchType);
     }
 
+    /**
+     * 拦截器
+     * @param invocation the method invocation joinpoint
+     * @return
+     * @throws Throwable
+     */
     @Override
     public Object invoke(MethodInvocation invocation) throws Throwable {
         // check whether current context is expected
@@ -63,6 +70,9 @@ public class SeataAutoDataSourceProxyAdvice implements MethodInterceptor, Introd
 
         // switch invoke instance to its proxy
         DataSource origin = (DataSource) invocation.getThis();
+        /**
+         * 从缓存中获取对应的数据源代理类
+         */
         SeataDataSourceProxy proxy = DataSourceProxyHolder.get(origin);
         Object[] args = invocation.getArguments();
         return declared.invoke(proxy, args);

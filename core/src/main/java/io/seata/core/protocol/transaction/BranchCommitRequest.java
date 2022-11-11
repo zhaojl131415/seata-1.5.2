@@ -19,6 +19,7 @@ import io.seata.core.protocol.MessageType;
 import io.seata.core.rpc.RpcContext;
 
 /**
+ * 分式事务提交请求
  * The type Branch commit request.
  *
  * @author sharajava
@@ -30,8 +31,17 @@ public class BranchCommitRequest extends AbstractBranchEndRequest {
         return MessageType.TYPE_BRANCH_COMMIT;
     }
 
+    /**
+     * 处理分式事务提交请求
+     * @param rpcContext the rpc context
+     * @return
+     */
     @Override
     public AbstractTransactionResponse handle(RpcContext rpcContext) {
+        /**
+         * 处理分支事务提交请求
+         * @see io.seata.rm.DefaultRMHandler#handle(BranchCommitRequest)
+         */
         return handler.handle(this);
     }
 

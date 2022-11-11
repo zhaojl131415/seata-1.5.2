@@ -123,6 +123,10 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
         }
 
         statementProxy.getConnectionProxy().setGlobalLockRequire(RootContext.requireGlobalLock());
+        /**
+         * 执行sql
+         * @see AbstractDMLBaseExecutor#doExecute(Object...)
+         */
         return doExecute(args);
     }
 

@@ -30,13 +30,16 @@ public abstract class AbstractDataSourceProxyXA extends BaseDataSourceResource<C
     protected static final String DEFAULT_RESOURCE_GROUP_ID = "DEFAULT_XA";
 
     /**
+     * 获取XA模式连接池代理实例 (XA提交/XA回滚)
      * Get a ConnectionProxyXA instance for finishing XA branch(XA commit/XA rollback)
      * @return ConnectionProxyXA instance
      * @throws SQLException exception
      */
     public ConnectionProxyXA getConnectionForXAFinish(XAXid xaXid) throws SQLException {
         String xaBranchXid = xaXid.toString();
+        // 根据XA模式分支事务id获取缓存中的连接池代理实例
         ConnectionProxyXA connectionProxyXA = lookup(xaBranchXid);
+        // 如果缓存不为空, 返回缓存中的连接池
         if (connectionProxyXA != null) {
             if (connectionProxyXA.getWrappedConnection().isClosed()) {
                 release(xaBranchXid, connectionProxyXA);
@@ -44,6 +47,10 @@ public abstract class AbstractDataSourceProxyXA extends BaseDataSourceResource<C
                 return connectionProxyXA;
             }
         }
+        /**
+         * 缓存中不存在, 则创建一个新的
+         * @see DataSourceProxyXA#getConnectionProxyXA()
+         */
         return (ConnectionProxyXA)getConnectionProxyXA();
     }
 

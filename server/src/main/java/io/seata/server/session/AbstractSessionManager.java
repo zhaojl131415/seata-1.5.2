@@ -22,6 +22,9 @@ import io.seata.core.exception.TransactionExceptionCode;
 import io.seata.core.model.BranchStatus;
 import io.seata.core.model.GlobalStatus;
 import io.seata.core.model.LockStatus;
+import io.seata.server.storage.db.store.DataBaseTransactionStoreManager;
+import io.seata.server.storage.file.store.FileTransactionStoreManager;
+import io.seata.server.storage.redis.store.RedisTransactionStoreManager;
 import io.seata.server.store.SessionStorable;
 import io.seata.server.store.TransactionStoreManager;
 import io.seata.server.store.TransactionStoreManager.LogOperation;
@@ -39,6 +42,7 @@ public abstract class AbstractSessionManager implements SessionManager, SessionL
     protected static final Logger LOGGER = LoggerFactory.getLogger(AbstractSessionManager.class);
 
     /**
+     * 事务存储管理器: 根据配置文件中的持久化配置属性{@code store.mode}获取对应的实现
      * The Transaction store manager.
      */
     protected TransactionStoreManager transactionStoreManager;
@@ -63,6 +67,11 @@ public abstract class AbstractSessionManager implements SessionManager, SessionL
         this.name = name;
     }
 
+    /**
+     * 新增全局事务会话
+     * @param session the session
+     * @throws TransactionException
+     */
     @Override
     public void addGlobalSession(GlobalSession session) throws TransactionException {
         if (LOGGER.isDebugEnabled()) {
@@ -71,6 +80,12 @@ public abstract class AbstractSessionManager implements SessionManager, SessionL
         writeSession(LogOperation.GLOBAL_ADD, session);
     }
 
+    /**
+     * 修改全局事务会话
+     * @param session the session
+     * @param status  the status
+     * @throws TransactionException
+     */
     @Override
     public void updateGlobalSessionStatus(GlobalSession session, GlobalStatus status) throws TransactionException {
         if (LOGGER.isDebugEnabled()) {
@@ -82,6 +97,11 @@ public abstract class AbstractSessionManager implements SessionManager, SessionL
         writeSession(LogOperation.GLOBAL_UPDATE, session);
     }
 
+    /**
+     * 移除全局事务会话
+     * @param session the session
+     * @throws TransactionException
+     */
     @Override
     public void removeGlobalSession(GlobalSession session) throws TransactionException {
         if (LOGGER.isDebugEnabled()) {
@@ -90,6 +110,12 @@ public abstract class AbstractSessionManager implements SessionManager, SessionL
         writeSession(LogOperation.GLOBAL_REMOVE, session);
     }
 
+    /**
+     * 新增分支事务会话
+     * @param session the global session
+     * @param branchSession       the session
+     * @throws TransactionException
+     */
     @Override
     public void addBranchSession(GlobalSession session, BranchSession branchSession) throws TransactionException {
         if (LOGGER.isDebugEnabled()) {
@@ -98,6 +124,12 @@ public abstract class AbstractSessionManager implements SessionManager, SessionL
         writeSession(LogOperation.BRANCH_ADD, branchSession);
     }
 
+    /**
+     * 修改分支事务会话
+     * @param branchSession the session
+     * @param status  the status
+     * @throws TransactionException
+     */
     @Override
     public void updateBranchSessionStatus(BranchSession branchSession, BranchStatus status)
         throws TransactionException {
@@ -107,6 +139,12 @@ public abstract class AbstractSessionManager implements SessionManager, SessionL
         writeSession(LogOperation.BRANCH_UPDATE, branchSession);
     }
 
+    /**
+     * 移除分支事务会话
+     * @param globalSession the global session
+     * @param branchSession       the session
+     * @throws TransactionException
+     */
     @Override
     public void removeBranchSession(GlobalSession globalSession, BranchSession branchSession)
         throws TransactionException {
@@ -118,27 +156,32 @@ public abstract class AbstractSessionManager implements SessionManager, SessionL
 
     @Override
     public void onBegin(GlobalSession globalSession) throws TransactionException {
+        // 新增全局事务会话
         addGlobalSession(globalSession);
     }
 
     @Override
     public void onStatusChange(GlobalSession globalSession, GlobalStatus status) throws TransactionException {
+        // 修改全局事务会话
         updateGlobalSessionStatus(globalSession, status);
     }
 
     @Override
     public void onBranchStatusChange(GlobalSession globalSession, BranchSession branchSession, BranchStatus status)
         throws TransactionException {
+        // 修改分支事务会话
         updateBranchSessionStatus(branchSession, status);
     }
 
     @Override
     public void onAddBranch(GlobalSession globalSession, BranchSession branchSession) throws TransactionException {
+        // 新增分支事务会话
         addBranchSession(globalSession, branchSession);
     }
 
     @Override
     public void onRemoveBranch(GlobalSession globalSession, BranchSession branchSession) throws TransactionException {
+        // 移除分支事务会话
         removeBranchSession(globalSession, branchSession);
     }
 
@@ -149,6 +192,7 @@ public abstract class AbstractSessionManager implements SessionManager, SessionL
 
     @Override
     public void onSuccessEnd(GlobalSession globalSession) throws TransactionException {
+        // 移除全局事务会话
         removeGlobalSession(globalSession);
     }
 
@@ -158,6 +202,16 @@ public abstract class AbstractSessionManager implements SessionManager, SessionL
     }
 
     private void writeSession(LogOperation logOperation, SessionStorable sessionStorable) throws TransactionException {
+        /**
+         * 事务存储管理器, 持久化写入session
+         * 根据配置文件中的持久化配置属性{@code store.mode}获取对应的实现
+         * file
+         * @see FileTransactionStoreManager#writeSession(LogOperation, SessionStorable)
+         * DB
+         * @see DataBaseTransactionStoreManager#writeSession(LogOperation, SessionStorable)
+         * redis
+         * @see RedisTransactionStoreManager#writeSession(LogOperation, SessionStorable)
+         */
         if (!transactionStoreManager.writeSession(logOperation, sessionStorable)) {
             if (LogOperation.GLOBAL_ADD.equals(logOperation)) {
                 throw new GlobalTransactionException(TransactionExceptionCode.FailedWriteSession,

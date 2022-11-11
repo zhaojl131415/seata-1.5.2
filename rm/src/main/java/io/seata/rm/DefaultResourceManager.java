@@ -65,8 +65,11 @@ public class DefaultResourceManager implements ResourceManager {
         resourceManagers.put(branchType, rm);
     }
 
+    /**
+     * 初始化资源管理器
+     */
     protected void initResourceManagers() {
-        //init all resource managers
+        //init all resource managers 初始化所有资源管理器: 类似SPI, 这里是自己实现的, 读取文件, 反射创建对象
         List<ResourceManager> allResourceManagers = EnhancedServiceLoader.loadAll(ResourceManager.class);
         if (CollectionUtils.isNotEmpty(allResourceManagers)) {
             for (ResourceManager rm : allResourceManagers) {
@@ -93,6 +96,9 @@ public class DefaultResourceManager implements ResourceManager {
     public Long branchRegister(BranchType branchType, String resourceId,
                                String clientId, String xid, String applicationData, String lockKeys)
         throws TransactionException {
+        /**
+         * @see AbstractResourceManager#branchRegister(BranchType, String, String, String, String, String) 
+         */
         return getResourceManager(branchType).branchRegister(branchType, resourceId, clientId, xid, applicationData,
             lockKeys);
     }
@@ -100,6 +106,9 @@ public class DefaultResourceManager implements ResourceManager {
     @Override
     public void branchReport(BranchType branchType, String xid, long branchId, BranchStatus status,
                              String applicationData) throws TransactionException {
+        /**
+         * @see AbstractResourceManager#branchReport(BranchType, String, long, BranchStatus, String)
+         */
         getResourceManager(branchType).branchReport(branchType, xid, branchId, status, applicationData);
     }
 

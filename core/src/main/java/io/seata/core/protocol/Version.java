@@ -95,6 +95,7 @@ public class Version {
     }
 
     /**
+     * 确定客户端版本是否大于或等于版本1.5.0
      * Determine whether the client version is greater than or equal to version 1.5.0
      *
      * @param version client version

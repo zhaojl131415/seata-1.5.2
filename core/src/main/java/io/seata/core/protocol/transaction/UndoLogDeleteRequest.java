@@ -67,6 +67,10 @@ public class UndoLogDeleteRequest extends AbstractTransactionRequestToRM impleme
 
     @Override
     public AbstractTransactionResponse handle(RpcContext rpcContext) {
+        /**
+         * 处理UndoLog删除请求
+         * @see io.seata.rm.DefaultRMHandler#handle(UndoLogDeleteRequest)
+         */
         handler.handle(this);
         return null;
     }

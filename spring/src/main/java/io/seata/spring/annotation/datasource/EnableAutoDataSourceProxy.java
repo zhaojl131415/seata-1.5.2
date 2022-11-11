@@ -24,11 +24,13 @@ import java.lang.annotation.Target;
 import org.springframework.context.annotation.Import;
 
 /**
+ * 启用数据源自动代理
  * @author xingfudeshi@gmail.com
  * This annotation will enable auto proxying of datasource bean.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
+// 注入AutoDataSourceProxyRegistrar
 @Import(AutoDataSourceProxyRegistrar.class)
 @Documented
 public @interface EnableAutoDataSourceProxy {

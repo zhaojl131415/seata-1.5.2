@@ -53,6 +53,7 @@ import java.util.function.Function;
 import static io.seata.common.Constants.DBKEYS_SPLIT_CHAR;
 
 /**
+ * 资源管理器Netty客户端
  * The Rm netty client.
  *
  * @author slievrly
@@ -71,9 +72,20 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
     private String applicationId;
     private String transactionServiceGroup;
 
+    /**
+     * 初始化资源管理器Netty客户端
+     */
     @Override
     public void init() {
         // registry processor
+        /**
+         * 注册处理器:
+         * 1.分支事务提交处理器
+         * 2.分支事务回滚处理器
+         * 3.分支事务UndoLog删除处理器
+         * 4.事务协调者响应处理器
+         * 5.心跳消息处理器
+         */
         registerProcessor();
         if (initialized.compareAndSet(false, true)) {
             super.init();
@@ -89,6 +101,9 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
 
     private RmNettyRemotingClient(NettyClientConfig nettyClientConfig, EventExecutorGroup eventExecutorGroup,
                                   ThreadPoolExecutor messageExecutor) {
+        /**
+         * 调用父类的构造方法: 实现netty客户端的逻辑
+         */
         super(nettyClientConfig, eventExecutorGroup, messageExecutor, TransactionRole.RMROLE);
         // set enableClientBatchSendRequest
         this.enableClientBatchSendRequest = ConfigurationFactory.getInstance().getBoolean(ConfigurationKeys.ENABLE_RM_CLIENT_BATCH_SEND_REQUEST,
@@ -113,6 +128,7 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
      * @return the instance
      */
     public static RmNettyRemotingClient getInstance(String applicationId, String transactionServiceGroup) {
+        // 实例化资源管理器Netty客户端
         RmNettyRemotingClient rmNettyRemotingClient = getInstance();
         rmNettyRemotingClient.setApplicationId(applicationId);
         rmNettyRemotingClient.setTransactionServiceGroup(transactionServiceGroup);
@@ -134,6 +150,7 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
                         KEEP_ALIVE_TIME, TimeUnit.SECONDS, new LinkedBlockingQueue<>(MAX_QUEUE_SIZE),
                         new NamedThreadFactory(nettyClientConfig.getRmDispatchThreadPrefix(),
                             nettyClientConfig.getClientWorkerThreads()), new ThreadPoolExecutor.CallerRunsPolicy());
+                    // 实例化资源管理器Netty客户端
                     instance = new RmNettyRemotingClient(nettyClientConfig, null, messageExecutor);
                 }
             }
@@ -296,17 +313,20 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
         return NettyClientConfig.getRpcRmRequestTimeout();
     }
 
+    /**
+     * 资源管理器注册处理器
+     */
     private void registerProcessor() {
-        // 1.registry rm client handle branch commit processor
+        // 1.registry rm client handle branch commit processor 注册 分支事务提交处理器
         RmBranchCommitProcessor rmBranchCommitProcessor = new RmBranchCommitProcessor(getTransactionMessageHandler(), this);
         super.registerProcessor(MessageType.TYPE_BRANCH_COMMIT, rmBranchCommitProcessor, messageExecutor);
-        // 2.registry rm client handle branch rollback processor
+        // 2.registry rm client handle branch rollback processor 注册 分支事务回滚处理器
         RmBranchRollbackProcessor rmBranchRollbackProcessor = new RmBranchRollbackProcessor(getTransactionMessageHandler(), this);
         super.registerProcessor(MessageType.TYPE_BRANCH_ROLLBACK, rmBranchRollbackProcessor, messageExecutor);
-        // 3.registry rm handler undo log processor
+        // 3.registry rm handler undo log processor 注册 分支事务UndoLog删除处理器
         RmUndoLogProcessor rmUndoLogProcessor = new RmUndoLogProcessor(getTransactionMessageHandler());
         super.registerProcessor(MessageType.TYPE_RM_DELETE_UNDOLOG, rmUndoLogProcessor, messageExecutor);
-        // 4.registry TC response processor
+        // 4.registry TC response processor 注册 事务协调者响应处理器
         ClientOnResponseProcessor onResponseProcessor =
             new ClientOnResponseProcessor(mergeMsgMap, super.getFutures(), getTransactionMessageHandler());
         super.registerProcessor(MessageType.TYPE_SEATA_MERGE_RESULT, onResponseProcessor, null);
@@ -315,7 +335,7 @@ public final class RmNettyRemotingClient extends AbstractNettyRemotingClient {
         super.registerProcessor(MessageType.TYPE_GLOBAL_LOCK_QUERY_RESULT, onResponseProcessor, null);
         super.registerProcessor(MessageType.TYPE_REG_RM_RESULT, onResponseProcessor, null);
         super.registerProcessor(MessageType.TYPE_BATCH_RESULT_MSG, onResponseProcessor, null);
-        // 5.registry heartbeat message processor
+        // 5.registry heartbeat message processor 注册 心跳消息处理器
         ClientHeartbeatProcessor clientHeartbeatProcessor = new ClientHeartbeatProcessor();
         super.registerProcessor(MessageType.TYPE_HEARTBEAT_MSG, clientHeartbeatProcessor, null);
     }

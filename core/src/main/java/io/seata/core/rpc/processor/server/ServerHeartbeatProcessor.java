@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * netty服务端心跳消息处理器: 用于执行客户端的心跳消息请求
  * process client heartbeat message request(PING).
  * <p>
  * process message type:

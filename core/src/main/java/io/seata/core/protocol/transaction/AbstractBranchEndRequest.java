@@ -18,6 +18,7 @@ package io.seata.core.protocol.transaction;
 import io.seata.core.model.BranchType;
 
 /**
+ * 分支结束请求抽象类
  * The type Abstract branch end request.
  *
  * @author sharajava

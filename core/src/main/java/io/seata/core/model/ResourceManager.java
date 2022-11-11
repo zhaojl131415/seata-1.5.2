@@ -18,6 +18,7 @@ package io.seata.core.model;
 import java.util.Map;
 
 /**
+ * 资源管理器: 常见行为。
  * Resource Manager: common behaviors.
  *
  * @author sharajava
@@ -25,6 +26,7 @@ import java.util.Map;
 public interface ResourceManager extends ResourceManagerInbound, ResourceManagerOutbound {
 
     /**
+     * 将 资源 注册到 资源管理器 中进行管理
      * Register a Resource to be managed by Resource Manager.
      *
      * @param resource The resource to be managed.
@@ -32,6 +34,7 @@ public interface ResourceManager extends ResourceManagerInbound, ResourceManager
     void registerResource(Resource resource);
 
     /**
+     * 将 资源 从 资源管理器 中取消注册
      * Unregister a Resource from the Resource Manager.
      *
      * @param resource The resource to be removed.
@@ -39,6 +42,7 @@ public interface ResourceManager extends ResourceManagerInbound, ResourceManager
     void unregisterResource(Resource resource);
 
     /**
+     * 获取此咨询管理器管理的所有资源。
      * Get all resources managed by this manager.
      *
      * @return resourceId -- Resource Map
@@ -46,6 +50,7 @@ public interface ResourceManager extends ResourceManagerInbound, ResourceManager
     Map<String, Resource> getManagedResources();
 
     /**
+     * 获取分支事务类型
      * Get the BranchType.
      *
      * @return The BranchType of ResourceManager.
