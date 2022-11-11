@@ -23,6 +23,7 @@ transport.serialization=seata
 transport.compressor=none
 
 #Transaction routing rules configuration, only for the client
+# 事务路由规则配置，仅适用于客户端: 这里的default_tx_group与客户端配置中 seata.tx-service-group=default_tx_group 保持一致
 service.vgroupMapping.default_tx_group=default
 #If you use a registry, you can ignore it
 service.default.grouplist=127.0.0.1:8091
@@ -66,9 +67,9 @@ tcc.fence.cleanPeriod=1h
 log.exceptionRate=100
 
 #Transaction storage configuration, only for the server. The file, DB, and redis configuration values are optional.
-store.mode=file
-store.lock.mode=file
-store.session.mode=file
+store.mode=db
+store.lock.mode=db
+store.session.mode=db
 #Used for password encryption
 store.publicKey=
 
@@ -84,9 +85,9 @@ store.file.sessionReloadReadSize=100
 store.db.datasource=druid
 store.db.dbType=mysql
 store.db.driverClassName=com.mysql.jdbc.Driver
-store.db.url=jdbc:mysql://127.0.0.1:3306/seata?useUnicode=true&rewriteBatchedStatements=true
-store.db.user=username
-store.db.password=password
+store.db.url=jdbc:mysql://127.0.0.1:3306/seata_server?useUnicode=true&rewriteBatchedStatements=true
+store.db.user=root
+store.db.password=123456
 store.db.minConn=5
 store.db.maxConn=30
 store.db.globalTable=global_table
