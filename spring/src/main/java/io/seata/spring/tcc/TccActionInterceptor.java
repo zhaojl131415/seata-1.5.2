@@ -85,6 +85,7 @@ public class TccActionInterceptor implements MethodInterceptor, ConfigurationCha
             return invocation.proceed();
         }
         Method method = getActionInterfaceMethod(invocation);
+        // 获取方法上的注解
         TwoPhaseBusinessAction businessAction = method.getAnnotation(TwoPhaseBusinessAction.class);
         //try method
         if (businessAction != null) {
@@ -97,7 +98,7 @@ public class TccActionInterceptor implements MethodInterceptor, ConfigurationCha
                 RootContext.bindBranchType(BranchType.TCC);
             }
             try {
-                //Handler the TCC Aspect, and return the business result
+                //Handler the TCC Aspect, and return the business result 处理TCC切面，并返回业务结果
                 return actionInterceptorHandler.proceed(method, invocation.getArguments(), xid, businessAction,
                         invocation::proceed);
             } finally {

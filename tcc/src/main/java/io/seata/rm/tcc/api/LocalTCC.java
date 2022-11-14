@@ -22,6 +22,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * 本地TCC bean注解，在TCC接口上添加
  * Local TCC bean annotation, add on the TCC interface
  *
  * @author zhangsen

@@ -21,8 +21,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * 需要传递给action上下文的TCC参数；
  * the TCC parameters that need to be passed to the action context;
  * <p>
+ * 在try方法的参数上添加此注释，参数将传递给action上下文
  * add this annotation on the parameters of the try method, and the parameters will be passed to the action context
  *
  * @author zhangsen

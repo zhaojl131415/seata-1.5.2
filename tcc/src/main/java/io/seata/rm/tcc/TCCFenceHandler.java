@@ -139,21 +139,24 @@ public class TCCFenceHandler {
                 Connection conn = DataSourceUtils.getConnection(dataSource);
                 // 查询TCC围栏对象
                 TCCFenceDO tccFenceDO = TCC_FENCE_DAO.queryTCCFenceDO(conn, xid, branchId);
+                // 围栏对象为空, 抛出异常, 提交失败
                 if (tccFenceDO == null) {
                     throw new TCCFenceException(String.format("TCC fence record not exists, commit fence method failed. xid= %s, branchId= %s", xid, branchId),
                             FrameworkErrorCode.RecordAlreadyExists);
                 }
+                // 分支事务已经提交, 直接返回, 不做处理. 解决幂等问题
                 if (TCCFenceConstant.STATUS_COMMITTED == tccFenceDO.getStatus()) {
                     LOGGER.info("Branch transaction has already committed before. idempotency rejected. xid: {}, branchId: {}, status: {}", xid, branchId, tccFenceDO.getStatus());
                     return true;
                 }
+                // 分支事务已经回滚, 或悬挂, 直接返回, 不做处理. 分支事务状态已过期
                 if (TCCFenceConstant.STATUS_ROLLBACKED == tccFenceDO.getStatus() || TCCFenceConstant.STATUS_SUSPENDED == tccFenceDO.getStatus()) {
                     if (LOGGER.isWarnEnabled()) {
                         LOGGER.warn("Branch transaction status is unexpected. xid: {}, branchId: {}, status: {}", xid, branchId, tccFenceDO.getStatus());
                     }
                     return false;
                 }
-                // 更新状态, 执行目标方法
+                // 更新状态, 执行目标方法(commit)
                 return updateStatusAndInvokeTargetMethod(conn, commitMethod, targetTCCBean, xid, branchId, TCCFenceConstant.STATUS_COMMITTED, status, args);
             } catch (Throwable t) {
                 status.setRollbackOnly();
@@ -179,9 +182,9 @@ public class TCCFenceHandler {
         return transactionTemplate.execute(status -> {
             try {
                 Connection conn = DataSourceUtils.getConnection(dataSource);
-                // 查询TCC围栏对象
+                // 查询日志表, 获取TCC围栏对象
                 TCCFenceDO tccFenceDO = TCC_FENCE_DAO.queryTCCFenceDO(conn, xid, branchId);
-                // non_rollback
+                // non_rollback 如果不存在, 则插入一条记录后, 直接返回, 不做处理. 解决空回滚问题
                 if (tccFenceDO == null) {
                     boolean result = insertTCCFenceLog(conn, xid, branchId, actionName, TCCFenceConstant.STATUS_SUSPENDED);
                     LOGGER.info("Insert tcc fence record result: {}. xid: {}, branchId: {}", result, xid, branchId);
@@ -191,10 +194,12 @@ public class TCCFenceHandler {
                     }
                     return true;
                 } else {
+                    // 获取状态判断: 解决幂等问题/悬挂问题, 如果状态已经回滚或者悬挂, 则直接返回, 不做处理. 解决幂等/悬挂问题
                     if (TCCFenceConstant.STATUS_ROLLBACKED == tccFenceDO.getStatus() || TCCFenceConstant.STATUS_SUSPENDED == tccFenceDO.getStatus()) {
                         LOGGER.info("Branch transaction had already rollbacked before, idempotency rejected. xid: {}, branchId: {}, status: {}", xid, branchId, tccFenceDO.getStatus());
                         return true;
                     }
+                    // 如果已经提交, 则提示当前分支事务状态是过期的, 直接返回, 不做处理
                     if (TCCFenceConstant.STATUS_COMMITTED == tccFenceDO.getStatus()) {
                         if (LOGGER.isWarnEnabled()) {
                             LOGGER.warn("Branch transaction status is unexpected. xid: {}, branchId: {}, status: {}", xid, branchId, tccFenceDO.getStatus());
