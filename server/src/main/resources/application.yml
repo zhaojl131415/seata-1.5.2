@@ -39,10 +39,10 @@ seata:
       application: seata-server
       server-addr: 192.168.110.228:8848
       group: SEATA_GROUP
+      cluster: default
       namespace: seata
       username: nacos
       password: nacos
-      cluster: default
   store:
     # support: file 、 db 、 redis
     mode: db

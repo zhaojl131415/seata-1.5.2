@@ -13,3 +13,19 @@ Idea安装Protobuf Support插件后重启
 注意: MacBook M1/M2芯片 会提示 找不到com.google.protobuf:protoc:exe:osx-aarch_64:3.3.0这个包, 我们通过maven仓库地址可以看到确实不存在这个包, 所以需要修改依赖指定使用x86_64的包.
 所以应当执行: mvn clean package -DskipTests -Dos.detected.classifier=osx-x86_64
 protobuf对应的Maven仓库地址: https://repo.maven.apache.org/maven2/com/google/protobuf/protoc
+
+seata服务端: docker部署
+1. 下载镜像：
+docker pull seataio/seata-server
+2. 容器运行
+docker run --name seata-server \
+-p 8091:8091 \
+-v /Users/zhaojinliang/docker/seata/conf/registry.conf:/seata-server/resources/registry.conf \
+-v /Users/zhaojinliang/docker/seata/conf/application.yml:/seata-server/resources/application.yml \
+-e SEATA_IP=192.168.110.228 \
+-e SEATA_PORT=8091 \
+-d seataio/seata-server
+
+注意: 配置文件项目中存在, 可以直接从项目中拷贝, 替换到docker对应的宿主机挂载目录
+registry.conf: script/client/conf/registry.conf
+application.yml: server/src/main/resources/application.yml
