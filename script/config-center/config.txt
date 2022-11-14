@@ -84,8 +84,8 @@ store.file.sessionReloadReadSize=100
 #These configurations are required if the `store mode` is `db`. If `store.mode,store.lock.mode,store.session.mode` are not equal to `db`, you can remove the configuration block.
 store.db.datasource=druid
 store.db.dbType=mysql
-store.db.driverClassName=com.mysql.jdbc.Driver
-store.db.url=jdbc:mysql://127.0.0.1:3306/seata_server?useUnicode=true&rewriteBatchedStatements=true
+store.db.driverClassName=com.mysql.cj.jdbc.Driver
+store.db.url=jdbc:mysql://192.168.110.228:3306/seata_server?useUnicode=true&rewriteBatchedStatements=true
 store.db.user=root
 store.db.password=123456
 store.db.minConn=5

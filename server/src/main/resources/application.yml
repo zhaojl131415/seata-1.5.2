@@ -24,13 +24,43 @@ console:
 seata:
   config:
     # support: nacos, consul, apollo, zk, etcd3
-    type: file
+    type: nacos
+    nacos:
+      server-addr: 192.168.110.228:8848
+      group: SEATA_GROUP
+      namespace: seata
+      username: nacos
+      password: nacos
+      dataId: seata.properties
   registry:
     # support: nacos, eureka, redis, zk, consul, etcd3, sofa
-    type: file
+    type: nacos
+    nacos:
+      application: seata-server
+      server-addr: 192.168.110.228:8848
+      group: SEATA_GROUP
+      namespace: seata
+      username: nacos
+      password: nacos
+      cluster: default
   store:
     # support: file 、 db 、 redis
-    mode: file
+    mode: db
+    db:
+      datasource: druid
+      ## mysql/oracle/postgresql/h2/oceanbase etc.
+      dbType: mysql
+      driverClassName: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://192.168.110.228:3306/seata_server?rewriteBatchedStatements=true
+      user: root
+      password: 123456
+      minConn: 5
+      maxConn: 100
+      globalTable: global_table
+      branchTable: branch_table
+      lockTable: lock_table
+      queryLimit: 100
+      maxWait: 5000
 #  server:
 #    service-port: 8091 #If not configured, the default is '${server.port} + 1000'
   security:
