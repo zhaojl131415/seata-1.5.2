@@ -18,7 +18,7 @@ package io.seata.core.model;
 import io.seata.core.exception.TransactionException;
 
 /**
- * 咨询管理器 入站接口: 用于控制分支事务的提交或者回滚
+ * 资源管理器 入站接口: 用于控制分支事务的提交或者回滚: 接收事务协调者通过netty发来的分支事务提交和回滚消息
  * Resource Manager.
  *
  * Control a branch transaction commit or rollback.

@@ -320,7 +320,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
                         && !existsAnnotation(interfacesIfJdk)) {
                         return bean;
                     }
-
+                    // 如果全局事务拦截器为空, 实例化一个
                     if (globalTransactionalInterceptor == null) {
                         // 指定全局事务拦截器
                         globalTransactionalInterceptor = new GlobalTransactionalInterceptor(failureHandlerHook);
@@ -328,6 +328,11 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
                                 ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION,
                                 (ConfigurationChangeListener)globalTransactionalInterceptor);
                     }
+                    /**
+                     * 对存在 {@link GlobalTransactional} 或 {@link GlobalLock} 注解的方法, 添加全局事务拦截器
+                     * 在这些被拦截的方法被调用时, 会执行全局事务拦截器的invoke方法
+                     * @see GlobalTransactionalInterceptor#invoke(MethodInvocation)
+                     */
                     interceptor = globalTransactionalInterceptor;
                 }
 

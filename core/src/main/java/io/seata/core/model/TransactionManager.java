@@ -18,6 +18,7 @@ package io.seata.core.model;
 import io.seata.core.exception.TransactionException;
 
 /**
+ * 全局事务管理器接口
  * Transaction Manager.
  *
  * Define a global transaction and control it.
@@ -27,6 +28,7 @@ import io.seata.core.exception.TransactionException;
 public interface TransactionManager {
 
     /**
+     * 开启一个全局事务
      * Begin a new global transaction.
      *
      * @param applicationId           ID of the application who begins this transaction.
@@ -41,6 +43,7 @@ public interface TransactionManager {
         throws TransactionException;
 
     /**
+     * 全局事务提交
      * Global commit.
      *
      * @param xid XID of the global transaction.
@@ -51,6 +54,7 @@ public interface TransactionManager {
     GlobalStatus commit(String xid) throws TransactionException;
 
     /**
+     * 全局事务回滚
      * Global rollback.
      *
      * @param xid XID of the global transaction
@@ -61,6 +65,7 @@ public interface TransactionManager {
     GlobalStatus rollback(String xid) throws TransactionException;
 
     /**
+     * 获取指定全局事务的当前状态
      * Get current status of the give transaction.
      *
      * @param xid XID of the global transaction.
@@ -71,6 +76,7 @@ public interface TransactionManager {
     GlobalStatus getStatus(String xid) throws TransactionException;
 
     /**
+     * 上报全局事务状态
      * Global report.
      *
      * @param xid XID of the global transaction.

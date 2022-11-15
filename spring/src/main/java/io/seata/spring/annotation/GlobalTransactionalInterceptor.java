@@ -65,6 +65,9 @@ import static io.seata.common.DefaultValues.TM_INTERCEPTOR_ORDER;
  * 全局事务拦截器
  * The type Global transactional interceptor.
  *
+ * spring扩展点: MethodInterceptor
+ * 实现了方法拦截器MethodInterceptor接口, 重写了invoke方法, 在被拦截的方法被调用时, 会先执行invoke方法
+ *
  * @author slievrly
  */
 public class GlobalTransactionalInterceptor implements ConfigurationChangeListener, MethodInterceptor, SeataInterceptor {
@@ -144,6 +147,12 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
         this.initDefaultGlobalTransactionTimeout();
     }
 
+    /**
+     * 实现了方法拦截器MethodInterceptor接口, 重写了invoke方法, 在被拦截的方法被调用时, 会先执行invoke方法
+     * @param methodInvocation the method invocation joinpoint
+     * @return
+     * @throws Throwable
+     */
     @Override
     public Object invoke(final MethodInvocation methodInvocation) throws Throwable {
         Class<?> targetClass =

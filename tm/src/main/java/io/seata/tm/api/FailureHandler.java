@@ -16,6 +16,8 @@
 package io.seata.tm.api;
 
 /**
+ * 全局事务失败时回调接口
+ * 扩展点: 默认实现只是打印了日志, 也可以自定义实现: 在实现类中重写方法, 对接邮件/钉钉等, 失败时调用发送给对应人员
  * Callback on failure.
  *
  * @author slievrly
@@ -23,6 +25,7 @@ package io.seata.tm.api;
 public interface FailureHandler {
 
     /**
+     * 全局事务开启失败回调
      * On begin failure.
      *
      * @param tx    the tx
@@ -31,6 +34,7 @@ public interface FailureHandler {
     void onBeginFailure(GlobalTransaction tx, Throwable cause);
 
     /**
+     * 全局事务回提交失败回调
      * On commit failure.
      *
      * @param tx    the tx
@@ -39,6 +43,7 @@ public interface FailureHandler {
     void onCommitFailure(GlobalTransaction tx, Throwable cause);
 
     /**
+     * 全局事务回回滚失败回调
      * On rollback failure.
      *
      * @param tx                the tx
@@ -47,6 +52,7 @@ public interface FailureHandler {
     void onRollbackFailure(GlobalTransaction tx, Throwable originalException);
 
     /**
+     * 全局事务回回滚重试失败回调
      * On rollback retrying
      *
      * @param tx                the tx

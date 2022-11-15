@@ -23,6 +23,7 @@ import org.springframework.stereotype.Component;
 import static io.seata.spring.boot.autoconfigure.StarterConstants.SEATA_PREFIX;
 
 /**
+ * seata配置属性
  * @author xingfudeshi@gmail.com
  */
 @Component

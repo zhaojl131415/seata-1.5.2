@@ -51,6 +51,11 @@ import static io.seata.spring.boot.autoconfigure.StarterConstants.SEATA_PREFIX;
 public class SeataAutoConfiguration {
     private static final Logger LOGGER = LoggerFactory.getLogger(SeataAutoConfiguration.class);
 
+    /**
+     * 全局事务失败时回调接口
+     * 扩展点: 默认实现只是打印了日志, 也可以自定义实现: 在实现类中重写方法, 对接邮件/钉钉等, 失败时调用发送给对应人员
+     * @return
+     */
     @Bean(BEAN_NAME_FAILURE_HANDLER)
     @ConditionalOnMissingBean(FailureHandler.class)
     public FailureHandler failureHandler() {

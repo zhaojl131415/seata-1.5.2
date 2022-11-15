@@ -29,6 +29,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * @author spilledyear@outlook.com
+ *
+ * spring-boot的接口: CommandLineRunner
+ * 实现CommandLineRunner接口重写了run方法；spring容器启动之后，加载CommandLineRunner实现类的逻辑资源，已达到完成资源初始化的任务；
  */
 @Component
 public class ServerRunner implements CommandLineRunner, DisposableBean {
@@ -47,6 +50,10 @@ public class ServerRunner implements CommandLineRunner, DisposableBean {
     public void run(String... args) {
         try {
             long start = System.currentTimeMillis();
+            /**
+             * 服务端启动
+             * @see Server#start(String[])
+             */
             Server.start(args);
             started = true;
 

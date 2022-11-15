@@ -18,7 +18,7 @@ package io.seata.core.model;
 import io.seata.core.exception.TransactionException;
 
 /**
- * 咨询管理器 出站接口: 用于向事务协调者发送出站请求
+ * 咨询管理器 出站接口: 用于向事务协调者发送出站请求. 通过netty向事务协调者发送分支事务注册和上报结果消息
  * Resource Manager: send outbound request to TC.
  *
  * @author sharajava
@@ -26,6 +26,7 @@ import io.seata.core.exception.TransactionException;
 public interface ResourceManagerOutbound {
 
     /**
+     * 通过netty向事务协调者发送分支事务注册消息
      * Branch register long.
      *
      * @param branchType the branch type
@@ -41,6 +42,7 @@ public interface ResourceManagerOutbound {
         TransactionException;
 
     /**
+     * 通过netty向事务协调者发送分支事务上报结果消息
      * Branch report.
      *
      * @param branchType      the branch type
@@ -53,6 +55,7 @@ public interface ResourceManagerOutbound {
     void branchReport(BranchType branchType, String xid, long branchId, BranchStatus status, String applicationData) throws TransactionException;
 
     /**
+     * 全局锁查询
      * Lock query boolean.
      *
      * @param branchType the branch type

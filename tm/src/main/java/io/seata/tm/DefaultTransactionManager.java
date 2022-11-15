@@ -41,6 +41,7 @@ import io.seata.core.rpc.processor.server.ServerOnRequestProcessor;
 import java.util.concurrent.TimeoutException;
 
 /**
+ * 默认全局事务管理器实现类
  * The type Default transaction manager.
  *
  * @author sharajava

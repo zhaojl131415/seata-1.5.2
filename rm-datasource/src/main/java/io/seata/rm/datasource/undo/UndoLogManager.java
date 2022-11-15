@@ -25,6 +25,7 @@ import io.seata.rm.datasource.ConnectionProxy;
 import io.seata.rm.datasource.DataSourceProxy;
 
 /**
+ * UndoLog管理器
  * The type Undo log manager.
  *
  * @author sharajava
@@ -33,6 +34,7 @@ import io.seata.rm.datasource.DataSourceProxy;
 public interface UndoLogManager {
 
     /**
+     * UndoLog写入
      * Flush undo logs.
      * @param cp the cp
      * @throws SQLException the sql exception
@@ -40,6 +42,7 @@ public interface UndoLogManager {
     void flushUndoLogs(ConnectionProxy cp) throws SQLException;
 
     /**
+     * UndoLog回滚
      * Undo.
      *
      * @param dataSourceProxy the data source proxy
@@ -50,6 +53,7 @@ public interface UndoLogManager {
     void undo(DataSourceProxy dataSourceProxy, String xid, long branchId) throws TransactionException;
 
     /**
+     * UndoLog删除
      * Delete undo log.
      *
      * @param xid      the xid
@@ -60,6 +64,7 @@ public interface UndoLogManager {
     void deleteUndoLog(String xid, long branchId, Connection conn) throws SQLException;
 
     /**
+     * UndoLog批量删除
      * batch Delete undo log.
      *
      * @param xids the xid set collections

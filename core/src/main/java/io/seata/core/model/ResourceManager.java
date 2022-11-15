@@ -18,7 +18,7 @@ package io.seata.core.model;
 import java.util.Map;
 
 /**
- * 资源管理器: 常见行为。
+ * 资源管理器接口: 常见行为。
  * Resource Manager: common behaviors.
  *
  * @author sharajava
