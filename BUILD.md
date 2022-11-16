@@ -10,8 +10,9 @@ Idea安装Protobuf Support插件后重启
    2.1 运行Idea Maven窗口 seata-serializer -> seata-serializer-protobuf -> Plugins -> protobuf -> protobuf:compile
 
    2.2 执行命令: mvn clean install -DskipTests=true
-注意: MacBook M1/M2芯片 会提示 找不到com.google.protobuf:protoc:exe:osx-aarch_64:3.3.0这个包, 我们通过maven仓库地址可以看到确实不存在这个包, 所以需要修改依赖指定使用x86_64的包.
+注意: MacBook (M1/M2芯片?) 会提示 找不到com.google.protobuf:protoc:exe:osx-aarch_64:3.3.0这个包, 我们通过maven仓库地址可以看到确实不存在这个包, 所以需要修改依赖指定使用x86_64的包.
 所以应当执行: mvn clean package -DskipTests -Dos.detected.classifier=osx-x86_64
+   或者在pom文件中，增加属性：<os.detected.classifier>osx-x86_64</os.detected.classifier>
 protobuf对应的Maven仓库地址: https://repo.maven.apache.org/maven2/com/google/protobuf/protoc
 
 seata服务端: docker部署
