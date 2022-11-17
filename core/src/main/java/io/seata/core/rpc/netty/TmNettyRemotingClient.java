@@ -65,6 +65,10 @@ public final class TmNettyRemotingClient extends AbstractNettyRemotingClient {
     private static final int MAX_QUEUE_SIZE = 2000;
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private String applicationId;
+    /**
+     * 事务服务组: 客户端配置文件中的seata.tx-service-group的值: default_tx_group
+     * 与服务端配置文件中的service.vgroupMapping.default_tx_group=default配置default_tx_group应保持一致
+     */
     private String transactionServiceGroup;
     private final AuthSigner signer;
     private String accessKey;
@@ -192,9 +196,15 @@ public final class TmNettyRemotingClient extends AbstractNettyRemotingClient {
     public void init() {
         // registry processor 注册处理器
         registerProcessor();
+        // CAS 完成第一次初始化
         if (initialized.compareAndSet(false, true)) {
+
             super.init();
             if (io.seata.common.util.StringUtils.isNotBlank(transactionServiceGroup)) {
+                // 获取客户端通道管理器
+                /**
+                 * @see NettyClientChannelManager#reconnect(String)
+                 */
                 getClientChannelManager().reconnect(transactionServiceGroup);
             }
         }

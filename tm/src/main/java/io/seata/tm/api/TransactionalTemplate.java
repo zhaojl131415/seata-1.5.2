@@ -54,7 +54,7 @@ public class TransactionalTemplate {
             throw new ShouldNeverHappenException("transactionInfo does not exist");
         }
         // 1.1 Get current transaction, if not null, the tx role is 'GlobalTransactionRole.Participant'.
-        // 获取当前事务, 如果不存在, 则以 事务参与者 的角色实例化一个新事务
+        // 获取当前全局事务, 如果不存在, 则以 事务参与者 的角色实例化一个新事务
         GlobalTransaction tx = GlobalTransactionContext.getCurrent();
 
         // 1.2 Handle the transaction propagation. 处理事务传播机制

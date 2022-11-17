@@ -36,6 +36,7 @@ import io.seata.server.session.BranchSession;
 import io.seata.server.session.GlobalSession;
 import io.seata.server.session.SessionHelper;
 import io.seata.server.session.SessionHolder;
+import io.seata.server.transaction.saga.SagaCore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -147,13 +148,16 @@ public class DefaultCore implements Core {
     @Override
     public String begin(String applicationId, String transactionServiceGroup, String name, int timeout)
         throws TransactionException {
-        // 创建全局会话
+        // 创建全局会话,
         GlobalSession session = GlobalSession.createGlobalSession(applicationId, transactionServiceGroup, name,
             timeout);
         MDC.put(RootContext.MDC_KEY_XID, session.getXid());
         // 添加会话生命周期监听器
         session.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
-        // 开启会话
+        /**
+         * 新增全局事务会话: 持久化
+         * 根据配置文件中的store.mode 找到对应的实现, 进行持久化
+         */
         session.begin();
 
         // transaction start event 发布事务开启事件
@@ -166,20 +170,24 @@ public class DefaultCore implements Core {
     public GlobalStatus commit(String xid) throws TransactionException {
         GlobalSession globalSession = SessionHolder.findGlobalSession(xid);
         if (globalSession == null) {
+            // 全局事务会话信息为空, 可能已经提交了
             return GlobalStatus.Finished;
         }
         globalSession.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
         // just lock changeStatus
 
         boolean shouldCommit = SessionHolder.lockAndExecute(globalSession, () -> {
+            // 如果全局事务的状态为开启
             if (globalSession.getStatus() == GlobalStatus.Begin) {
-                // Highlight: Firstly, close the session, then no more branch can be registered.
+                // Highlight: Firstly, close the session, then no more branch can be registered. 亮点: 首先关闭会话，然后不再可以注册分支。
                 globalSession.closeAndClean();
                 if (globalSession.canBeCommittedAsync()) {
+                    // 如果能一步提交, 则执行异步提交
                     globalSession.asyncCommit();
                     MetricsPublisher.postSessionDoneEvent(globalSession, GlobalStatus.Committed, false, false);
                     return false;
                 } else {
+                    // 否则将全局事务的状态设置为提交中
                     globalSession.changeGlobalStatus(GlobalStatus.Committing);
                     return true;
                 }
@@ -188,6 +196,7 @@ public class DefaultCore implements Core {
         });
 
         if (shouldCommit) {
+            // 执行全局事务提交
             boolean success = doGlobalCommit(globalSession, false);
             //If successful and all remaining branches can be committed asynchronously, do async commit.
             if (success && globalSession.hasBranch() && globalSession.canBeCommittedAsync()) {
@@ -208,8 +217,13 @@ public class DefaultCore implements Core {
         MetricsPublisher.postSessionDoingEvent(globalSession, retrying);
 
         if (globalSession.isSaga()) {
+            /**
+             * SAGA模式 全局事务提交
+             * @see SagaCore#doGlobalCommit(GlobalSession, boolean)
+             */
             success = getCore(BranchType.SAGA).doGlobalCommit(globalSession, retrying);
         } else {
+            // 遍历所有分支事务, 通知各分支事务执行提交
             Boolean result = SessionHelper.forEach(globalSession.getSortedBranches(), branchSession -> {
                 // if not retrying, skip the canBeCommittedAsync branches
                 if (!retrying && branchSession.canBeCommittedAsync()) {
@@ -222,6 +236,10 @@ public class DefaultCore implements Core {
                     return CONTINUE;
                 }
                 try {
+                    /**
+                     * 通过netty发送异步分支事务提交请求
+                     * @see AbstractCore#branchCommit(GlobalSession, BranchSession)
+                     */
                     BranchStatus branchStatus = getCore(branchSession.getBranchType()).branchCommit(globalSession, branchSession);
                     if (isXaerNotaTimeout(globalSession,branchStatus)) {
                         LOGGER.info("Commit branch XAER_NOTA retry timeout, xid = {} branchId = {}", globalSession.getXid(), branchSession.getBranchId());
@@ -229,6 +247,7 @@ public class DefaultCore implements Core {
                     }
                     switch (branchStatus) {
                         case PhaseTwo_Committed:
+                            // 两阶段提交: 移除分支事务
                             SessionHelper.removeBranch(globalSession, branchSession, !retrying);
                             return CONTINUE;
                         case PhaseTwo_CommitFailed_Unretryable:
@@ -280,6 +299,9 @@ public class DefaultCore implements Core {
         // if it succeeds and there is no branch, retrying=true is the asynchronous state when retrying. EndCommitted is
         // executed to improve concurrency performance, and the global transaction ends..
         if (success && globalSession.getBranchSessions().isEmpty()) {
+            /**
+             * 全局事务结束
+             */
             SessionHelper.endCommitted(globalSession, retrying);
             LOGGER.info("Committing global transaction is successfully done, xid = {}.", globalSession.getXid());
         }
@@ -303,6 +325,7 @@ public class DefaultCore implements Core {
         boolean shouldRollBack = SessionHolder.lockAndExecute(globalSession, () -> {
             globalSession.close(); // Highlight: Firstly, close the session, then no more branch can be registered.
             if (globalSession.getStatus() == GlobalStatus.Begin) {
+                // 更新全局事务会话的状态: 回滚中
                 globalSession.changeGlobalStatus(GlobalStatus.Rollbacking);
                 return true;
             }
@@ -323,17 +346,25 @@ public class DefaultCore implements Core {
         MetricsPublisher.postSessionDoingEvent(globalSession, retrying);
 
         if (globalSession.isSaga()) {
-            // SAGA模式回滚
+            /**
+             * SAGA模式 全局事务回滚
+             * @see SagaCore#doGlobalRollback(GlobalSession, boolean)
+             */
             success = getCore(BranchType.SAGA).doGlobalRollback(globalSession, retrying);
         } else {
+            // 遍历所有分支事务, 通知各分支事务执行回滚
             Boolean result = SessionHelper.forEach(globalSession.getReverseSortedBranches(), branchSession -> {
                 BranchStatus currentBranchStatus = branchSession.getStatus();
+                // 一阶段失败
                 if (currentBranchStatus == BranchStatus.PhaseOne_Failed) {
+                    // 移除分支事务
                     SessionHelper.removeBranch(globalSession, branchSession, !retrying);
                     return CONTINUE;
                 }
                 try {
-                    // 遍历所有分支事务, 远程发送分支事务回滚请求
+                    /**
+                     * 遍历所有分支事务, 通过netty发送分支事务回滚请求
+                     */
                     BranchStatus branchStatus = branchRollback(globalSession, branchSession);
                     if (isXaerNotaTimeout(globalSession, branchStatus)) {
                         LOGGER.info("Rollback branch XAER_NOTA retry timeout, xid = {} branchId = {}", globalSession.getXid(), branchSession.getBranchId());
@@ -374,6 +405,7 @@ public class DefaultCore implements Core {
         // In db mode, lock and branch data residual problems may occur.
         // Therefore, execution needs to be delayed here and cannot be executed synchronously.
         if (success) {
+            // 全局事务回滚结束
             SessionHelper.endRollbacked(globalSession, retrying);
             LOGGER.info("Rollback global transaction successfully, xid = {}.", globalSession.getXid());
         }

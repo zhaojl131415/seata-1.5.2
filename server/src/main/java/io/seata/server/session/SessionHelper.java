@@ -172,6 +172,7 @@ public class SessionHelper {
             } else {
                 globalSession.changeGlobalStatus(GlobalStatus.Rollbacked);
             }
+            // 全局事务结束
             globalSession.end();
             if (!DELAY_HANDLE_SESSION) {
                 MetricsPublisher.postSessionDoneEvent(globalSession, false, false);
@@ -255,6 +256,7 @@ public class SessionHelper {
 
 
     /**
+     * 移除分支事务会话
      * remove branchSession from globalSession
      * @param globalSession the globalSession
      * @param branchSession the branchSession

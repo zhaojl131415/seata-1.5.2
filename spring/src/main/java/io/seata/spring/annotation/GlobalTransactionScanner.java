@@ -543,6 +543,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
 
     /**
      * spring 容器启动时, 会执行此方法
+     * 微服务如果需要使用seata, 就必须引入seata的包, 在微服务启动时, 作为seata服务的客户端, 会通过自动配置, 注入此全局事务扫描器, 调用此方法.
      */
     @Override
     public void afterPropertiesSet() {

@@ -269,12 +269,16 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                 }
 
                 // Find UNDO LOG
+                /**
+                 * 查找UndoLog记录: 每个微服务对应数据库中有个undo_log表
+                 */
                 selectPST = conn.prepareStatement(SELECT_UNDO_LOG_SQL);
                 selectPST.setLong(1, branchId);
                 selectPST.setString(2, xid);
                 rs = selectPST.executeQuery();
 
                 boolean exists = false;
+                // 如果存在UndoLog
                 while (rs.next()) {
                     exists = true;
 
@@ -289,10 +293,12 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                         return;
                     }
 
+                    // 获取undo_log表中的rollback_info字段数据
                     String contextString = rs.getString(ClientTableColumnsName.UNDO_LOG_CONTEXT);
                     Map<String, String> context = parseContext(contextString);
                     byte[] rollbackInfo = getRollbackInfo(rs);
 
+                    // 解析undo_log表中的rollback_info字段
                     String serializer = context == null ? null : context.get(UndoLogConstants.SERIALIZER_KEY);
                     UndoLogParser parser = serializer == null ? UndoLogParserFactory.getInstance()
                         : UndoLogParserFactory.getInstance(serializer);
@@ -305,12 +311,14 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                         if (sqlUndoLogs.size() > 1) {
                             Collections.reverse(sqlUndoLogs);
                         }
+                        // 遍历UndoLog, 执行回滚
                         for (SQLUndoLog sqlUndoLog : sqlUndoLogs) {
                             TableMeta tableMeta = TableMetaCacheFactory.getTableMetaCache(dataSourceProxy.getDbType()).getTableMeta(
                                 conn, sqlUndoLog.getTableName(), dataSourceProxy.getResourceId());
                             sqlUndoLog.setTableMeta(tableMeta);
                             AbstractUndoExecutor undoExecutor = UndoExecutorFactory.getUndoExecutor(
                                 dataSourceProxy.getDbType(), sqlUndoLog);
+                            // 执行回滚
                             undoExecutor.executeOn(conn);
                         }
                     } finally {
@@ -329,7 +337,9 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                 // See https://github.com/seata/seata/issues/489
 
                 if (exists) {
+                    // 删除UndoLog
                     deleteUndoLog(xid, branchId, conn);
+                    // UndoLog执行回滚后, 提交
                     conn.commit();
                     if (LOGGER.isInfoEnabled()) {
                         LOGGER.info("xid {} branch {}, undo_log deleted with {}", xid, branchId,

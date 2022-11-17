@@ -67,6 +67,9 @@ public class DataBaseLockManager extends AbstractLockManager implements Initiali
     @Override
     public boolean releaseGlobalSessionLock(GlobalSession globalSession) throws TransactionException {
         try {
+            /**
+             * @see DataBaseLocker#releaseLock(String)
+             */
             return getLocker().releaseLock(globalSession.getXid());
         } catch (Exception t) {
             LOGGER.error("unLock globalSession error, xid:{}", globalSession.getXid(), t);

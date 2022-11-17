@@ -75,6 +75,10 @@ public abstract class AbstractNettyRemotingServer extends AbstractNettyRemoting 
             throw new RuntimeException("rm client is not connected. dbkey:" + resourceId + ",clientId:" + clientId);
         }
         RpcMessage rpcMessage = buildRequestMessage(msg, ProtocolConstants.MSGTYPE_RESQUEST_SYNC);
+        /**
+         * 通过netty发送异步消息
+         * @see AbstractNettyRemotingClient.ClientHandler#channelRead(ChannelHandlerContext, Object)
+         */
         return super.sendSync(channel, rpcMessage, NettyServerConfig.getRpcRequestTimeout());
     }
 

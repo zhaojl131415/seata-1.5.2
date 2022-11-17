@@ -63,6 +63,9 @@ public class AsyncWorker {
 
     private final DataSourceManager dataSourceManager;
 
+    /**
+     * 分支事务异步提交队列
+     */
     private final BlockingQueue<Phase2Context> commitQueue;
 
     private final ScheduledExecutorService scheduledExecutor;
@@ -75,11 +78,17 @@ public class AsyncWorker {
 
         ThreadFactory threadFactory = new NamedThreadFactory("AsyncWorker", 2, true);
         scheduledExecutor = new ScheduledThreadPoolExecutor(2, threadFactory);
+        /**
+         * 延时周期任务: 执行分支事务提交
+         */
         scheduledExecutor.scheduleAtFixedRate(this::doBranchCommitSafely, 10, 1000, TimeUnit.MILLISECONDS);
     }
 
     public BranchStatus branchCommit(String xid, long branchId, String resourceId) {
         Phase2Context context = new Phase2Context(xid, branchId, resourceId);
+        /**
+         * 将分支事务提交加入队列
+         */
         addToCommitQueue(context);
         return BranchStatus.PhaseTwo_Committed;
     }
@@ -89,9 +98,11 @@ public class AsyncWorker {
      * then doBranchCommit urgently(so that the queue could be empty again) and retry this process.
      */
     private void addToCommitQueue(Phase2Context context) {
+        // 加入阻塞队列, 加入成功, 则直接返回
         if (commitQueue.offer(context)) {
             return;
         }
+        // 如果加入队列失败, 则将队列中的现有任务全部取出执行, 后将当前任务继续加入到队列中
         CompletableFuture.runAsync(this::doBranchCommitSafely, scheduledExecutor)
                 .thenRun(() -> addToCommitQueue(context));
     }
@@ -115,16 +126,21 @@ public class AsyncWorker {
             return;
         }
 
-        // transfer all context currently received to this list
+        // transfer all context currently received to this list 将阻塞队列中的所有数据转移到List
         List<Phase2Context> allContexts = new LinkedList<>();
         commitQueue.drainTo(allContexts);
 
-        // group context by their resourceId
+        // group context by their resourceId 按资源id分组
         Map<String, List<Phase2Context>> groupedContexts = groupedByResourceId(allContexts);
-
+        // 遍历处理分支事务提交
         groupedContexts.forEach(this::dealWithGroupedContexts);
     }
 
+    /**
+     * 分组
+     * @param contexts
+     * @return
+     */
     Map<String, List<Phase2Context>> groupedByResourceId(List<Phase2Context> contexts) {
         Map<String, List<Phase2Context>> groupedContexts = new HashMap<>(DEFAULT_RESOURCE_SIZE);
         contexts.forEach(context -> {
@@ -138,6 +154,11 @@ public class AsyncWorker {
         return groupedContexts;
     }
 
+    /**
+     * 处理分支事务提交
+     * @param resourceId
+     * @param contexts
+     */
     private void dealWithGroupedContexts(String resourceId, List<Phase2Context> contexts) {
         if (StringUtils.isBlank(resourceId)) {
             //ConcurrentHashMap required notNull key
@@ -154,11 +175,13 @@ public class AsyncWorker {
         Connection conn = null;
         try {
             conn = dataSourceProxy.getPlainConnection();
+            // 获取UndoLog处理器
             UndoLogManager undoLogManager = UndoLogManagerFactory.getUndoLogManager(dataSourceProxy.getDbType());
 
             // split contexts into several lists, with each list contain no more element than limit size
             List<List<Phase2Context>> splitByLimit = Lists.partition(contexts, UNDOLOG_DELETE_LIMIT_SIZE);
             for (List<Phase2Context> partition : splitByLimit) {
+                // 遍历执行, 删除UndoLog后提交事务
                 deleteUndoLog(conn, undoLogManager, partition);
             }
         } catch (SQLException sqlExx) {
@@ -179,8 +202,10 @@ public class AsyncWorker {
         });
 
         try {
+            // 批量删除UndoLog
             undoLogManager.batchDeleteUndoLog(xids, branchIds, conn);
             if (!conn.getAutoCommit()) {
+                // 分支事务提交
                 conn.commit();
             }
         } catch (SQLException e) {

@@ -108,6 +108,7 @@ public class NacosRegistryServiceImpl implements RegistryService<EventListener> 
     @Override
     public void register(InetSocketAddress address) throws Exception {
         NetUtil.validAddress(address);
+        // 向nacos注册实例
         getNamingInstance().registerInstance(getServiceName(), getServiceGroup(), address.getAddress().getHostAddress(), address.getPort(), getClusterName());
     }
 
@@ -140,8 +141,18 @@ public class NacosRegistryServiceImpl implements RegistryService<EventListener> 
         getNamingInstance().unsubscribe(getServiceName(), getServiceGroup(), clusters, listener);
     }
 
+    /**
+     * 查找实例
+     * @param key the key
+     * @return
+     * @throws Exception
+     */
     @Override
     public List<InetSocketAddress> lookup(String key) throws Exception {
+        /**
+         * 获取配置中的集群名字: service.vgroupMapping.default_tx_group=default
+         * key为: default_tx_group, clusterName为: default
+         */
         String clusterName = getServiceGroup(key);
         if (clusterName == null) {
             return null;
@@ -168,14 +179,17 @@ public class NacosRegistryServiceImpl implements RegistryService<EventListener> 
         if (!LISTENER_SERVICE_MAP.containsKey(clusterName)) {
             synchronized (LOCK_OBJ) {
                 if (!LISTENER_SERVICE_MAP.containsKey(clusterName)) {
+                    // DCL 双重校验锁, 判断集群
                     List<String> clusters = new ArrayList<>();
                     clusters.add(clusterName);
+                    // 通过Nacos的接口, 获取当前服务名对应的所有的服务
                     List<Instance> firstAllInstances = getNamingInstance().getAllInstances(getServiceName(), getServiceGroup(), clusters);
                     if (null != firstAllInstances) {
                         List<InetSocketAddress> newAddressList = firstAllInstances.stream()
                                 .filter(eachInstance -> eachInstance.isEnabled() && eachInstance.isHealthy())
                                 .map(eachInstance -> new InetSocketAddress(eachInstance.getIp(), eachInstance.getPort()))
                                 .collect(Collectors.toList());
+                        // 缓存实例Map
                         CLUSTER_ADDRESS_MAP.put(clusterName, newAddressList);
                     }
                     subscribe(clusterName, event -> {

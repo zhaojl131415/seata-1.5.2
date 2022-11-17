@@ -168,6 +168,11 @@ public class NettyServerBootstrap implements RemotingBootstrap {
             this.serverBootstrap.bind(getListenPort()).sync();
             XID.setPort(getListenPort());
             LOGGER.info("Server started, service listen port: {}", getListenPort());
+            /**
+             * 服务注册
+             * Nacos
+             * @see io.seata.discovery.registry.nacos.NacosRegistryServiceImpl#register(InetSocketAddress)
+             */
             RegistryFactory.getInstance().register(new InetSocketAddress(XID.getIpAddress(), XID.getPort()));
             initialized.set(true);
         } catch (SocketException se) {

@@ -34,6 +34,7 @@ import io.seata.core.protocol.transaction.GlobalLockQueryRequest;
 import io.seata.core.protocol.transaction.GlobalLockQueryResponse;
 import io.seata.core.rpc.netty.RmNettyRemotingClient;
 import io.seata.rm.AbstractResourceManager;
+import io.seata.rm.datasource.undo.AbstractUndoLogManager;
 import io.seata.rm.datasource.undo.UndoLogManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,6 +109,9 @@ public class DataSourceManager extends AbstractResourceManager {
     @Override
     public BranchStatus branchCommit(BranchType branchType, String xid, long branchId, String resourceId,
                                      String applicationData) throws TransactionException {
+        /**
+         * 异步提交分支事务
+         */
         return asyncWorker.branchCommit(xid, branchId, resourceId);
     }
 
@@ -119,6 +123,10 @@ public class DataSourceManager extends AbstractResourceManager {
             throw new ShouldNeverHappenException(String.format("resource: %s not found",resourceId));
         }
         try {
+            /**
+             * 执行数据回滚
+             * @see AbstractUndoLogManager#undo(DataSourceProxy, String, long)
+             */
             UndoLogManagerFactory.getUndoLogManager(dataSourceProxy.getDbType()).undo(dataSourceProxy, xid, branchId);
         } catch (TransactionException te) {
             StackTraceLogger.info(LOGGER, te,

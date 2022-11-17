@@ -168,6 +168,9 @@ class NettyClientChannelManager {
     void reconnect(String transactionServiceGroup) {
         List<String> availList = null;
         try {
+            /**
+             * 获取可用服务器列表
+             */
             availList = getAvailServerList(transactionServiceGroup);
         } catch (Exception e) {
             LOGGER.error("Failed to get available servers: {}", e.getMessage(), e);
@@ -253,6 +256,10 @@ class NettyClientChannelManager {
     }
 
     private List<String> getAvailServerList(String transactionServiceGroup) throws Exception {
+        /**
+         * 获取可用服务器列表
+         * @see io.seata.discovery.registry.nacos.NacosRegistryServiceImpl#lookup(String)
+         */
         List<InetSocketAddress> availInetSocketAddressList = RegistryFactory.getInstance()
                 .lookup(transactionServiceGroup);
         if (CollectionUtils.isEmpty(availInetSocketAddressList)) {

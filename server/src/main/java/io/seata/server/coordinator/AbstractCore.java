@@ -31,6 +31,7 @@ import io.seata.core.protocol.transaction.BranchCommitResponse;
 import io.seata.core.protocol.transaction.BranchRollbackRequest;
 import io.seata.core.protocol.transaction.BranchRollbackResponse;
 import io.seata.core.rpc.RemotingServer;
+import io.seata.core.rpc.netty.AbstractNettyRemotingServer;
 import io.seata.server.lock.LockManager;
 import io.seata.server.lock.LockerManagerFactory;
 import io.seata.server.session.BranchSession;
@@ -177,6 +178,9 @@ public abstract class AbstractCore implements Core {
             request.setResourceId(branchSession.getResourceId());
             request.setApplicationData(branchSession.getApplicationData());
             request.setBranchType(branchSession.getBranchType());
+            /**
+             * 通过netty发送异步分支事务提交请求
+             */
             return branchCommitSend(request, globalSession, branchSession);
         } catch (IOException | TimeoutException e) {
             throw new BranchTransactionException(FailedToSendBranchCommitRequest,
@@ -187,6 +191,10 @@ public abstract class AbstractCore implements Core {
 
     protected BranchStatus branchCommitSend(BranchCommitRequest request, GlobalSession globalSession,
                                             BranchSession branchSession) throws IOException, TimeoutException {
+        /**
+         * 通过netty发送异步分支事务提交请求
+         * @see AbstractNettyRemotingServer#sendSyncRequest(String, String, Object)
+         */
         BranchCommitResponse response = (BranchCommitResponse) remotingServer.sendSyncRequest(
                 branchSession.getResourceId(), branchSession.getClientId(), request);
         return response.getBranchStatus();
@@ -222,8 +230,8 @@ public abstract class AbstractCore implements Core {
     protected BranchStatus branchRollbackSend(BranchRollbackRequest request, GlobalSession globalSession,
                                               BranchSession branchSession) throws IOException, TimeoutException {
         /**
-         * 通过远程服务给分支事务发送异步回滚请求
-         * 底层Netty实现
+         * 通过远程服务Netty给分支事务发送异步回滚请求
+         * @see AbstractNettyRemotingServer#sendSyncRequest(String, String, Object)
          */
         BranchRollbackResponse response = (BranchRollbackResponse) remotingServer.sendSyncRequest(
                 branchSession.getResourceId(), branchSession.getClientId(), request);

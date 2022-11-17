@@ -94,6 +94,7 @@ public abstract class AbstractSessionManager implements SessionManager, SessionL
         if (GlobalStatus.Rollbacking == status) {
             session.getBranchSessions().forEach(i -> i.setLockStatus(LockStatus.Rollbacking));
         }
+        // 修改全局事务会话的状态: 回滚中
         writeSession(LogOperation.GLOBAL_UPDATE, session);
     }
 

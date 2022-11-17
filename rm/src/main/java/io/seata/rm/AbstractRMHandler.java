@@ -110,6 +110,8 @@ public abstract class AbstractRMHandler extends AbstractExceptionHandler
         /**
          * 执行分支事务提交
          *
+         * AT模式(默认)
+         * @see io.seata.rm.datasource.DataSourceManager#branchCommit(BranchType, String, long, String, String)
          * XA模式
          * @see io.seata.rm.datasource.xa.ResourceManagerXA#branchCommit(BranchType, String, long, String, String)
          * SAGA模式
@@ -148,6 +150,8 @@ public abstract class AbstractRMHandler extends AbstractExceptionHandler
         /**
          * 执行分支事务回滚
          *
+         * AT模式(默认)
+         * @see io.seata.rm.datasource.DataSourceManager#branchRollback(BranchType, String, long, String, String)
          * XA模式
          * @see io.seata.rm.datasource.xa.ResourceManagerXA#branchRollback(BranchType, String, long, String, String)
          * SAGA模式
@@ -173,7 +177,7 @@ public abstract class AbstractRMHandler extends AbstractExceptionHandler
     protected abstract ResourceManager getResourceManager();
 
     /**
-     * 处理咨询管理器请求
+     * 处理资源管理器请求
      * @param request received request message
      * @param context context of the RPC
      * @return

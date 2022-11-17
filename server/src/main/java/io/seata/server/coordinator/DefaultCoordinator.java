@@ -66,6 +66,7 @@ import io.seata.server.session.GlobalSession;
 import io.seata.server.session.SessionCondition;
 import io.seata.server.session.SessionHelper;
 import io.seata.server.session.SessionHolder;
+import io.seata.server.storage.db.session.DataBaseSessionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -450,17 +451,28 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
 
     /**
      * Handle async committing.
+     * 周期线程池延时调用处理事务异步提交: 周期执行
      */
     protected void handleAsyncCommitting() {
+        // 构建查询条件: 异步提交
         SessionCondition sessionCondition = new SessionCondition(GlobalStatus.AsyncCommitting);
+        /**
+         * 获取所有异步提交的全局事务会话
+         * @see DataBaseSessionManager#findGlobalSessions(SessionCondition)
+         */
         Collection<GlobalSession> asyncCommittingSessions =
                 SessionHolder.getAsyncCommittingSessionManager().findGlobalSessions(sessionCondition);
         if (CollectionUtils.isEmpty(asyncCommittingSessions)) {
             return;
         }
+        // 遍历所有全局事务会话, 执行全局事务提交
         SessionHelper.forEach(asyncCommittingSessions, asyncCommittingSession -> {
             try {
                 asyncCommittingSession.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
+                /**
+                 * 执行全局事务提交
+                 * @see DefaultCore#doGlobalCommit(GlobalSession, boolean)
+                 */
                 core.doGlobalCommit(asyncCommittingSession, true);
             } catch (TransactionException ex) {
                 LOGGER.error("Failed to async committing [{}] {} {}", asyncCommittingSession.getXid(), ex.getCode(), ex.getMessage(), ex);

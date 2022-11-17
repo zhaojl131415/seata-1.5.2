@@ -99,6 +99,9 @@ public class SagaCore extends AbstractCore {
     @Override
     public boolean doGlobalCommit(GlobalSession globalSession, boolean retrying) throws TransactionException {
         try {
+            /**
+             * 通过netty发送异步分支事务提交请求
+             */
             BranchStatus branchStatus = branchCommit(globalSession, SessionHelper.newBranch(BranchType.SAGA,
                     globalSession.getXid(), -1, getSagaResourceId(globalSession), globalSession.getStatus().name()));
 

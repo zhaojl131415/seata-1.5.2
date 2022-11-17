@@ -225,7 +225,7 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
         final AspectTransactional aspectTransactional) throws Throwable {
         boolean succeed = true;
         try {
-            // 对业务方法进行增强: 前后添加全局事务处理
+            // 事务模板执行事务: 对业务方法进行增强: 前后添加全局事务处理
             return transactionalTemplate.execute(new TransactionalExecutor() {
                 // 执行业务方法
                 @Override

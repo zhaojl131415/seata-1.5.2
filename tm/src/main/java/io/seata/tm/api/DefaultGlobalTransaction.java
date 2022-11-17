@@ -90,6 +90,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
 
     @Override
     public void begin(int timeout, String name) throws TransactionException {
+        // 如果角色不是事务发起者, 直接返回, 比如订单/库存/用户: 下单时订单是发起者, 库存和用户是参与者
         if (role != GlobalTransactionRole.Launcher) {
             assertXIDNotNull();
             if (LOGGER.isDebugEnabled()) {
@@ -109,6 +110,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
          */
         xid = transactionManager.begin(null, null, name, timeout);
         status = GlobalStatus.Begin;
+        // 绑定全局事务id, ThreadLocal中, 以便分支事务获取同一个
         RootContext.bind(xid);
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Begin new global transaction [{}]", xid);
@@ -128,6 +130,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         assertXIDNotNull();
         int retry = COMMIT_RETRY_COUNT <= 0 ? DEFAULT_TM_COMMIT_RETRY_COUNT : COMMIT_RETRY_COUNT;
         try {
+            // 重试
             while (retry > 0) {
                 try {
                     retry--;

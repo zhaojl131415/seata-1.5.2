@@ -41,6 +41,12 @@ import io.seata.core.model.GlobalStatus;
 import io.seata.core.model.LockStatus;
 import io.seata.server.UUIDGenerator;
 import io.seata.server.lock.LockerManagerFactory;
+import io.seata.server.storage.db.lock.DataBaseLockManager;
+import io.seata.server.storage.db.session.DataBaseSessionManager;
+import io.seata.server.storage.file.lock.FileLockManager;
+import io.seata.server.storage.file.session.FileSessionManager;
+import io.seata.server.storage.redis.lock.RedisLockManager;
+import io.seata.server.storage.redis.session.RedisSessionManager;
 import io.seata.server.store.SessionStorable;
 import io.seata.server.store.StoreConfig;
 import org.slf4j.Logger;
@@ -207,6 +213,7 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
     @Override
     public void changeGlobalStatus(GlobalStatus status) throws TransactionException {
         if (GlobalStatus.Rollbacking == status) {
+            // 更新锁状态: 回滚中
             LockerManagerFactory.getLockManager().updateLockStatus(xid, LockStatus.Rollbacking);
         }
         this.status = status;
@@ -267,6 +274,19 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
     }
 
     public void clean() throws TransactionException {
+        /**
+         * 释放全局锁:
+         * 开启全局事务时, 对操作数据生成了前置镜像和后置镜像, 为了保证隔离性, 避免其他事务对同一数据进行操作后无法回滚镜像, 所以对操作数据加了锁, 不让操作.
+         * 此时事务已经关闭了, 所以需要释放锁, 放行对此数据的操作.
+         *
+         * 根据配置store.lock.mode/store.mode(如果前者为空, 读取后者, 否则默认file)加载管理器
+         * db: lock_table
+         * @see DataBaseLockManager#releaseGlobalSessionLock(GlobalSession)
+         * file
+         * @see FileLockManager#releaseGlobalSessionLock(GlobalSession)
+         * redis
+         * @see RedisLockManager#releaseGlobalSessionLock(GlobalSession)
+         */
         if (!LockerManagerFactory.getLockManager().releaseGlobalSessionLock(this)) {
             throw new TransactionException("UnLock globalSession error, xid = " + this.xid);
         }
@@ -279,6 +299,7 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
      */
     public void closeAndClean() throws TransactionException {
         close();
+        // 存在AT模式的分支事务
         if (this.hasATBranch()) {
             clean();
         }
@@ -407,6 +428,7 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
         this.transactionServiceGroup = transactionServiceGroup;
         this.transactionName = transactionName;
         this.timeout = timeout;
+        // 生成全局事务idXID
         this.xid = XID.generateXID(transactionId);
     }
 
@@ -758,7 +780,15 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
 
     public void asyncCommit() throws TransactionException {
         this.addSessionLifecycleListener(SessionHolder.getAsyncCommittingSessionManager());
+        // 全局事务状态: 异步提交
         this.setStatus(GlobalStatus.AsyncCommitting);
+        /**
+         * 根据配置文件中的持久化配置属性{@code store.mode}获取对应的实现
+         *
+         * @see DataBaseSessionManager#addGlobalSession(GlobalSession)
+         * @see FileSessionManager#addGlobalSession(GlobalSession)
+         * @see RedisSessionManager#addGlobalSession(GlobalSession)
+         */
         SessionHolder.getAsyncCommittingSessionManager().addGlobalSession(this);
     }
 
