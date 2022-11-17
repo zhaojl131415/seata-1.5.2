@@ -41,6 +41,7 @@ import io.seata.rm.datasource.ConnectionProxy;
 import io.seata.rm.datasource.DataSourceProxy;
 import io.seata.rm.datasource.sql.struct.TableMeta;
 import io.seata.rm.datasource.sql.struct.TableMetaCacheFactory;
+import io.seata.rm.datasource.undo.mysql.MySQLUndoLogManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -239,8 +240,11 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
         if (needCompress(undoLogContent)) {
             compressorType = ROLLBACK_INFO_COMPRESS_TYPE;
             undoLogContent = CompressorFactory.getCompressor(compressorType.getCode()).compress(undoLogContent);
-        }
-
+            }
+        /**
+         * 插入undo_log表
+         * @see MySQLUndoLogManager#insertUndoLogWithNormal(String, long, String, byte[], Connection)
+         */
         insertUndoLogWithNormal(xid, branchId, buildContext(parser.getName(), compressorType), undoLogContent, cp.getTargetConnection());
     }
 

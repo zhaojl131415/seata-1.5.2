@@ -29,6 +29,7 @@ import io.seata.server.session.BranchSession;
 import io.seata.server.session.GlobalSession;
 
 /**
+ * 数据库全局锁管理器
  * The type db lock manager.
  *
  * @author zjinlei

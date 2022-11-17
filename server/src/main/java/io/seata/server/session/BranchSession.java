@@ -25,6 +25,7 @@ import io.seata.core.exception.TransactionException;
 import io.seata.core.model.BranchStatus;
 import io.seata.core.model.BranchType;
 import io.seata.core.model.LockStatus;
+import io.seata.server.lock.AbstractLockManager;
 import io.seata.server.lock.LockerManagerFactory;
 import io.seata.server.storage.file.lock.FileLocker;
 import io.seata.server.store.SessionStorable;
@@ -284,6 +285,9 @@ public class BranchSession implements Lockable, Comparable<BranchSession>, Sessi
 
     public boolean lock(boolean autoCommit, boolean skipCheckLock) throws TransactionException {
         if (this.getBranchType().equals(BranchType.AT)) {
+            /**
+             * @see AbstractLockManager#acquireLock(BranchSession, boolean, boolean)
+             */
             return LockerManagerFactory.getLockManager().acquireLock(this, autoCommit, skipCheckLock);
         }
         return true;

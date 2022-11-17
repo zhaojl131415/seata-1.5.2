@@ -26,10 +26,12 @@ import io.seata.core.lock.Locker;
 import io.seata.core.lock.RowLock;
 import io.seata.core.model.LockStatus;
 import io.seata.server.session.BranchSession;
+import io.seata.server.storage.db.lock.DataBaseLocker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * 全局锁管理器抽象类
  * The type Abstract lock manager.
  *
  * @author zhangsen
@@ -57,11 +59,15 @@ public abstract class AbstractLockManager implements LockManager {
             return true;
         }
         // get locks of branch
+        // 从分支事务中收集行锁
         List<RowLock> locks = collectRowLocks(branchSession);
         if (CollectionUtils.isEmpty(locks)) {
             // no lock
             return true;
         }
+        /**
+         * @see DataBaseLocker#acquireLock(List, boolean, boolean)
+         */
         return getLocker(branchSession).acquireLock(locks, autoCommit, skipCheckLock);
     }
 
@@ -128,7 +134,7 @@ public abstract class AbstractLockManager implements LockManager {
         String xid = branchSession.getXid();
         long transactionId = branchSession.getTransactionId();
         long branchId = branchSession.getBranchId();
-
+        // 收集行锁
         return collectRowLocks(lockKey, resourceId, xid, transactionId, branchId);
     }
 
@@ -145,6 +151,7 @@ public abstract class AbstractLockManager implements LockManager {
     }
 
     /**
+     * 收集行锁列表。
      * Collect row locks list.
      *
      * @param lockKey       the lock key
@@ -164,7 +171,9 @@ public abstract class AbstractLockManager implements LockManager {
             if (idx < 0) {
                 return locks;
             }
+            // 表名
             String tableName = tableGroupedLockKey.substring(0, idx);
+            // 合并的主键id
             String mergedPKs = tableGroupedLockKey.substring(idx + 1);
             if (StringUtils.isBlank(mergedPKs)) {
                 return locks;
@@ -173,6 +182,7 @@ public abstract class AbstractLockManager implements LockManager {
             if (pks == null || pks.length == 0) {
                 return locks;
             }
+            // 遍历主键
             for (String pk : pks) {
                 if (StringUtils.isNotBlank(pk)) {
                     RowLock rowLock = new RowLock();

@@ -77,6 +77,7 @@ public class ATCore extends AbstractCore {
             }
         }
         try {
+            // 分支事务会话加锁
             if (!branchSession.lock(autoCommit, skipCheckLock)) {
                 throw new BranchTransactionException(LockKeyConflict,
                     String.format("Global lock acquire failed xid = %s branchId = %s", globalSession.getXid(),

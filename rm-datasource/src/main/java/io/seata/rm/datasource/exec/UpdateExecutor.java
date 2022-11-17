@@ -67,17 +67,28 @@ public class UpdateExecutor<T, S extends Statement> extends AbstractDMLBaseExecu
     protected TableRecords beforeImage() throws SQLException {
         ArrayList<List<Object>> paramAppenderList = new ArrayList<>();
         TableMeta tmeta = getTableMeta();
+        // 构建前置镜像SQL
         String selectSQL = buildBeforeImageSQL(tmeta, paramAppenderList);
+        // 执行前置对象SQL构建数据表记录
         return buildTableRecords(tmeta, selectSQL, paramAppenderList);
     }
 
+    /**
+     * 构建前置镜像SQL
+     * @param tableMeta
+     * @param paramAppenderList
+     * @return
+     */
     private String buildBeforeImageSQL(TableMeta tableMeta, ArrayList<List<Object>> paramAppenderList) {
         SQLUpdateRecognizer recognizer = (SQLUpdateRecognizer) sqlRecognizer;
         List<String> updateColumns = recognizer.getUpdateColumns();
         StringBuilder prefix = new StringBuilder("SELECT ");
         StringBuilder suffix = new StringBuilder(" FROM ").append(getFromTableInSQL());
+        // 构建where查询条件
         String whereCondition = buildWhereCondition(recognizer, paramAppenderList);
+        // 构建排序规则
         String orderByCondition = buildOrderCondition(recognizer, paramAppenderList);
+        // 构建limit
         String limitCondition = buildLimitCondition(recognizer, paramAppenderList);
         if (StringUtils.isNotBlank(whereCondition)) {
             suffix.append(WHERE).append(whereCondition);
@@ -88,8 +99,10 @@ public class UpdateExecutor<T, S extends Statement> extends AbstractDMLBaseExecu
         if (StringUtils.isNotBlank(limitCondition)) {
             suffix.append(" ").append(limitCondition);
         }
+        // 加锁
         suffix.append(" FOR UPDATE");
         StringJoiner selectSQLJoin = new StringJoiner(", ", prefix.toString(), suffix.toString());
+        // 只关心要修改的列
         if (ONLY_CARE_UPDATE_COLUMNS) {
             if (!containsPK(updateColumns)) {
                 selectSQLJoin.add(getColumnNamesInSQL(tableMeta.getEscapePkNameList(getDbType())));
@@ -105,6 +118,7 @@ public class UpdateExecutor<T, S extends Statement> extends AbstractDMLBaseExecu
                 selectSQLJoin.add(ColumnUtils.addEscape(onUpdateColumn, getDbType()));
             }
         } else {
+            // 遍历全表的所有列
             for (String columnName : tableMeta.getAllColumns().keySet()) {
                 selectSQLJoin.add(ColumnUtils.addEscape(columnName, getDbType()));
             }

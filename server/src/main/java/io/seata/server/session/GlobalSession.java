@@ -232,6 +232,9 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
         branchSession.setStatus(status);
         // 遍历生命周期监听器,
         for (SessionLifecycleListener lifecycleListener : lifecycleListeners) {
+            /**
+             * @see AbstractSessionManager#onBranchStatusChange(GlobalSession, BranchSession, BranchStatus)
+             */
             lifecycleListener.onBranchStatusChange(this, branchSession, status);
         }
     }
@@ -326,8 +329,12 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
 
     @Override
     public void addBranch(BranchSession branchSession) throws TransactionException {
-        // 遍历生命周期监听器:
+        // 遍历生命周期监听器
         for (SessionLifecycleListener lifecycleListener : lifecycleListeners) {
+            /**
+             * 添加分支事务
+             * @see AbstractSessionManager#onAddBranch(GlobalSession, BranchSession)
+             */
             lifecycleListener.onAddBranch(this, branchSession);
         }
         branchSession.setStatus(BranchStatus.Registered);

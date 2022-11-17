@@ -329,7 +329,7 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
         String lockKeys = buildLockKey(lockKeyRecords);
         if (null != lockKeys) {
             connectionProxy.appendLockKey(lockKeys);
-
+            // 构建UndoLog
             SQLUndoLog sqlUndoLog = buildUndoItem(beforeImage, afterImage);
             connectionProxy.appendUndoLog(sqlUndoLog);
         }
@@ -390,6 +390,7 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
 
 
     /**
+     * 构建前置镜像
      * build a BeforeImage
      *
      * @param tableMeta         the tableMeta
@@ -409,7 +410,9 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
                     }
                 }
             }
+            // 执行sql查询
             rs = ps.executeQuery();
+            // 构建
             return TableRecords.buildRecords(tableMeta, rs);
         } finally {
             IOUtil.close(rs);

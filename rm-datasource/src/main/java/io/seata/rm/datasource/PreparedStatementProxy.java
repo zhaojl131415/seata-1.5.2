@@ -25,6 +25,7 @@ import io.seata.rm.datasource.exec.ExecuteTemplate;
 import io.seata.sqlparser.ParametersHolder;
 
 /**
+ * DB预处理代理类, 实现了sql包下的PreparedStatement接口,
  * The type Prepared statement proxy.
  *
  * @author sharajava

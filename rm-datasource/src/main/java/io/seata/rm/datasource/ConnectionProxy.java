@@ -29,6 +29,7 @@ import io.seata.core.model.BranchType;
 import io.seata.rm.DefaultResourceManager;
 import io.seata.rm.datasource.exec.LockConflictException;
 import io.seata.rm.datasource.exec.LockRetryController;
+import io.seata.rm.datasource.undo.AbstractUndoLogManager;
 import io.seata.rm.datasource.undo.SQLUndoLog;
 import io.seata.rm.datasource.undo.UndoLogManagerFactory;
 import org.slf4j.Logger;
@@ -229,11 +230,20 @@ public class ConnectionProxy extends AbstractConnectionProxy {
 
     private void doCommit() throws SQLException {
         if (context.inGlobalTransaction()) {
-            // 执行全局事务提交
+            /**
+             * 执行全局事务提交
+             * 1. 注册分支事务
+             * 2. 持久化UndoLog
+             * 3. 本地分支事务提交
+             * 4. 上报分支事务结果
+             */
             processGlobalTransactionCommit();
         } else if (context.isGlobalLockRequire()) {
             processLocalCommitWithGlobalLocks();
         } else {
+            /**
+             * 执行本地分支事务提交
+             */
             targetConnection.commit();
         }
     }
@@ -248,6 +258,13 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         context.reset();
     }
 
+    /**
+     * 执行全局事务提交
+     * 1. 注册分支事务
+     * 2. 持久化UndoLog
+     * 3. 本地分支事务提交
+     * 4. 上报分支事务结果
+     */
     private void processGlobalTransactionCommit() throws SQLException {
         try {
             // 注册分支事务
@@ -256,23 +273,28 @@ public class ConnectionProxy extends AbstractConnectionProxy {
             recognizeLockKeyConflictException(e, context.buildLockKeys());
         }
         try {
-            // 写入UndoLog
+            /**
+             * 持久化UndoLog: insert表
+             * @see AbstractUndoLogManager#flushUndoLogs(ConnectionProxy)
+             */
             UndoLogManagerFactory.getUndoLogManager(this.getDbType()).flushUndoLogs(this);
-            // 提交sql, 当前连接池事务提交, 但全局事务还没提交
+            // 执行原生数据库连接池的提交方法, 提交sql, 当前连接池的本地分支事务提交, 但全局事务还没提交
             targetConnection.commit();
         } catch (Throwable ex) {
             LOGGER.error("process connectionProxy commit error: {}", ex.getMessage(), ex);
+            // 上报分支事务提交异常结果: false
             report(false);
             throw new SQLException(ex);
         }
         if (IS_REPORT_SUCCESS_ENABLE) {
-            // 上报提交结果: 分支事务上报结果
+            // 上报分支事务提交结果: true
             report(true);
         }
         context.reset();
     }
 
     private void register() throws TransactionException {
+        // 判断是否有undoLog, 幂等校验
         if (!context.hasUndoLog() || !context.hasLockKey()) {
             return;
         }
@@ -301,6 +323,7 @@ public class ConnectionProxy extends AbstractConnectionProxy {
      */
     public void changeAutoCommit() throws SQLException {
         getContext().setAutoCommitChanged(true);
+        // 指定自动提交为false, 在方法内部则不会执行doCommit();
         setAutoCommit(false);
     }
 
@@ -308,6 +331,7 @@ public class ConnectionProxy extends AbstractConnectionProxy {
     public void setAutoCommit(boolean autoCommit) throws SQLException {
         if ((context.inGlobalTransaction() || context.isGlobalLockRequire()) && autoCommit && !getAutoCommit()) {
             // change autocommit from false to true, we should commit() first according to JDBC spec.
+            // 当前操作是否在全局事务或全局锁中, 并且指定了自动提交为true, 原生的数据库默认自动提交为false, 才会直接执行提交
             doCommit();
         }
         targetConnection.setAutoCommit(autoCommit);

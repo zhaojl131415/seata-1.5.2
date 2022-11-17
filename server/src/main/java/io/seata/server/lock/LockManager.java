@@ -24,6 +24,7 @@ import io.seata.server.session.BranchSession;
 import io.seata.server.session.GlobalSession;
 
 /**
+ * 全局锁管理器
  * The interface Lock manager.
  *
  * @author sharajava
@@ -31,6 +32,7 @@ import io.seata.server.session.GlobalSession;
 public interface LockManager {
 
     /**
+     * 加锁
      * Acquire lock boolean.
      *
      * @param branchSession the branch session
@@ -40,6 +42,7 @@ public interface LockManager {
     boolean acquireLock(BranchSession branchSession) throws TransactionException;
 
     /**
+     * 加锁
      * Acquire lock boolean.
      *
      * @param branchSession the branch session
@@ -51,6 +54,7 @@ public interface LockManager {
     boolean acquireLock(BranchSession branchSession, boolean autoCommit, boolean skipCheckLock) throws TransactionException;
 
     /**
+     * 释放分支事务锁
      * Un lock boolean.
      *
      * @param branchSession the branch session
@@ -60,6 +64,7 @@ public interface LockManager {
     boolean releaseLock(BranchSession branchSession) throws TransactionException;
 
     /**
+     * 释放全局锁
      * Un lock boolean.
      *
      * @param globalSession the global session

@@ -99,13 +99,22 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
         if (!JdbcConstants.MYSQL.equalsIgnoreCase(getDbType()) && isMultiPk()) {
             throw new NotSupportYetException("multi pk only support mysql!");
         }
-        // 构建前置镜像
+        /**
+         * 构建前置镜像
+         * 以update语句为例:
+         * @see UpdateExecutor#beforeImage()
+         */
         TableRecords beforeImage = beforeImage();
-        // 通过StatementProxy执行对应的sql
+        // 通过StatementProxy获取原生的Statement执行对应的业务sql
         T result = statementCallback.execute(statementProxy.getTargetStatement(), args);
+        // 业务sql更新行数
         int updateCount = statementProxy.getUpdateCount();
         if (updateCount > 0) {
-            // 构建后置镜像
+            /**
+             * 构建后置镜像
+             * 以update语句为例:
+             * @see UpdateExecutor#afterImage(TableRecords)
+             */
             TableRecords afterImage = afterImage(beforeImage);
             // 准备UndoLog
             prepareUndoLog(beforeImage, afterImage);
@@ -145,6 +154,7 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
     protected T executeAutoCommitTrue(Object[] args) throws Throwable {
         ConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
         try {
+            // 修改自动提交状态
             connectionProxy.changeAutoCommit();
             return new LockRetryPolicy(connectionProxy).execute(() -> {
                 // 执行非自动提交
@@ -162,6 +172,7 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
             throw e;
         } finally {
             connectionProxy.getContext().reset();
+            // 指定自动提交为true, 在方法内部则会执行doCommit();
             connectionProxy.setAutoCommit(true);
         }
     }

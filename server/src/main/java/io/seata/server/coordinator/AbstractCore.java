@@ -79,6 +79,7 @@ public abstract class AbstractCore implements Core {
         return SessionHolder.lockAndExecute(globalSession, () -> {
             globalSessionStatusCheck(globalSession);
             globalSession.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
+            // 构建分支事务会话: branch_table
             BranchSession branchSession = SessionHelper.newBranchByGlobal(globalSession, branchType, resourceId,
                     applicationData, lockKeys, clientId);
             MDC.put(RootContext.MDC_KEY_BRANCH_ID, String.valueOf(branchSession.getBranchId()));
@@ -86,6 +87,12 @@ public abstract class AbstractCore implements Core {
              * 分支事务会话加锁
              * AT模式
              * @see ATCore#branchSessionLock(GlobalSession, BranchSession)
+             *
+             * 为什么要对分支事务加锁? 为什么只有AT模式加了, 其他模式抽象方法为空?
+             * 因为在AT模式下, 每个分支事务都是作为一个本地事务去执行提交, 对于当前分支事务是已经提交了的, 但是全局事务还是未提交的状态,
+             * 基于数据库的隔离级别: 读已提交来看, 当前分支事务已完成提交, 别的业务操作就可以对数据进行修改,
+             * 此时如果全局事务遭遇异常, 需要回滚, 但是因为别的业务操作已经改变了数据, 导致分支事务的前/后置镜像数据与数据库数据不一致, 而无法完成回滚.
+             * 所以这里需要加锁, 以保证分支事务完成提交后, 全局事务还没提交的情况, 其他的业务操作无法修改数据.
              */
             branchSessionLock(globalSession, branchSession);
             try {
@@ -95,6 +102,11 @@ public abstract class AbstractCore implements Core {
                  */
                 globalSession.addBranch(branchSession);
             } catch (RuntimeException ex) {
+                /**
+                 * 分支事务会话解锁
+                 * AT模式
+                 * @see ATCore#branchSessionUnlock(BranchSession)
+                 */
                 branchSessionUnlock(branchSession);
                 throw new BranchTransactionException(FailedToAddBranch, String
                         .format("Failed to store branch xid = %s branchId = %s", globalSession.getXid(),
@@ -153,7 +165,7 @@ public abstract class AbstractCore implements Core {
         branchSession.setApplicationData(applicationData);
         globalSession.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
         /**
-         * 根据分支事务上报的结果
+         * 根据分支事务上报的结果, 修改全局事务会话中对应分支事务的状态
          */
         globalSession.changeBranchStatus(branchSession, status);
 

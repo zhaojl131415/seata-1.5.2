@@ -61,6 +61,9 @@ public class DataBaseLocker extends AbstractLocker {
             return true;
         }
         try {
+            /**
+             * @see LockStoreDataBaseDAO#acquireLock(List, boolean, boolean)
+             */
             return lockStore.acquireLock(convertToLockDO(locks), autoCommit, skipCheckLock);
         } catch (StoreException e) {
             throw e;

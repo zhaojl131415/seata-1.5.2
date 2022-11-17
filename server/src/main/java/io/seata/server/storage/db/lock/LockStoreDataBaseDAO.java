@@ -161,7 +161,7 @@ public class LockStoreDataBaseDAO implements LockStore {
                     }
                     return false;
                 }
-                // If the lock has been exists in db, remove it from the lockDOs
+                // If the lock has been exists in db, remove it from the lockDOs 如果锁已经存在, 则移除
                 if (CollectionUtils.isNotEmpty(dbExistedRowKeys)) {
                     unrepeatedLockDOs = lockDOs.stream().filter(lockDO -> !dbExistedRowKeys.contains(lockDO.getRowKey()))
                             .collect(Collectors.toList());
@@ -183,6 +183,7 @@ public class LockStoreDataBaseDAO implements LockStore {
                     return false;
                 }
             } else {
+                // 执行加锁: lock_table表insert数据
                 if (!doAcquireLocks(conn, unrepeatedLockDOs)) {
                     if (LOGGER.isInfoEnabled()) {
                         LOGGER.info("Global lock batch acquire failed, xid {} branchId {} pks {}", unrepeatedLockDOs.get(0).getXid(),
