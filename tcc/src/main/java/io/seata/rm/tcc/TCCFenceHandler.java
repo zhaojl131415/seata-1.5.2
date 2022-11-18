@@ -102,6 +102,7 @@ public class TCCFenceHandler {
                 boolean result = insertTCCFenceLog(conn, xid, branchId, actionName, TCCFenceConstant.STATUS_TRIED);
                 LOGGER.info("TCC fence prepare result: {}. xid: {}, branchId: {}", result, xid, branchId);
                 if (result) {
+                    // 回调执行业务方法, 返回执行结果
                     return targetCallback.execute();
                 } else {
                     throw new TCCFenceException(String.format("Insert tcc fence record error, prepare fence failed. xid= %s, branchId= %s", xid, branchId),

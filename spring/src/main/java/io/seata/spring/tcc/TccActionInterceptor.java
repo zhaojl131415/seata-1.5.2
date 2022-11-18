@@ -104,7 +104,11 @@ public class TccActionInterceptor implements MethodInterceptor, ConfigurationCha
                 RootContext.bindBranchType(BranchType.TCC);
             }
             try {
-                //Handler the TCC Aspect, and return the business result 处理TCC切面，并返回业务结果
+                //Handler the TCC Aspect, and return the business result
+                /**
+                 * 对添加了{@link TwoPhaseBusinessAction}注解的方法, 进行增强
+                 * 处理TCC切面，使用TCC围栏(处理幂等/悬挂/空回滚等问题)，执行业务方法, 返回执行结果
+                 */
                 return actionInterceptorHandler.proceed(method, invocation.getArguments(), xid, businessAction,
                         invocation::proceed);
             } finally {

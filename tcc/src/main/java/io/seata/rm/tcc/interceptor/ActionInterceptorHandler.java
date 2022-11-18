@@ -90,7 +90,10 @@ public class ActionInterceptorHandler {
 
             if (businessAction.useTCCFence()) {
                 try {
-                    // Use TCC Fence, and return the business result 使用TCC围栏，返回业务结果
+                    // Use TCC Fence, and return the business result
+                    /**
+                     * 使用TCC围栏(处理幂等/悬挂/空回滚等问题)，执行业务方法, 返回执行结果
+                     */
                     return TCCFenceHandler.prepareFence(xid, Long.valueOf(branchId), actionName, targetCallback);
                 } catch (SkipCallbackWrapperException | UndeclaredThrowableException e) {
                     Throwable originException = e.getCause();
