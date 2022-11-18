@@ -267,6 +267,9 @@ public abstract class AbstractTCInboundHandler extends AbstractExceptionHandler 
             public void execute(GlobalLockQueryRequest request, GlobalLockQueryResponse response)
                 throws TransactionException {
                 try {
+                    /**
+                     * @see DefaultCoordinator#doLockCheck(GlobalLockQueryRequest, GlobalLockQueryResponse, RpcContext)
+                     */
                     doLockCheck(request, response, rpcContext);
                 } catch (StoreException e) {
                     throw new TransactionException(TransactionExceptionCode.FailedStore, String

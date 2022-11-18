@@ -120,6 +120,7 @@ public class DataBaseLocker extends AbstractLocker {
             return true;
         }
         try {
+            // 执行sql查询: lock_table表
             return lockStore.isLockable(convertToLockDO(locks));
         } catch (DataAccessException e) {
             throw e;

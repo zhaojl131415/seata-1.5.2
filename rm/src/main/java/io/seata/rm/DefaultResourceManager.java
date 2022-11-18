@@ -115,6 +115,10 @@ public class DefaultResourceManager implements ResourceManager {
     @Override
     public boolean lockQuery(BranchType branchType, String resourceId,
                              String xid, String lockKeys) throws TransactionException {
+        /**
+         * AT模式
+         * @see io.seata.rm.datasource.DataSourceManager#lockQuery(BranchType, String, String, String)
+         */
         return getResourceManager(branchType).lockQuery(branchType, resourceId, xid, lockKeys);
     }
 

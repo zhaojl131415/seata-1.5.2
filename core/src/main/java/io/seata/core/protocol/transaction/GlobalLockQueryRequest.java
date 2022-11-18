@@ -32,6 +32,10 @@ public class GlobalLockQueryRequest extends BranchRegisterRequest  {
 
     @Override
     public AbstractTransactionResponse handle(RpcContext rpcContext) {
+        /**
+         * 全局锁查询
+         * @see io.seata.server.AbstractTCInboundHandler#handle(GlobalLockQueryRequest, RpcContext)
+         */
         return handler.handle(this, rpcContext);
     }
 

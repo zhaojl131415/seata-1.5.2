@@ -26,6 +26,7 @@ import io.seata.core.exception.TransactionException;
 import io.seata.core.model.BranchType;
 import io.seata.core.rpc.RemotingServer;
 import io.seata.server.coordinator.AbstractCore;
+import io.seata.server.lock.AbstractLockManager;
 import io.seata.server.session.BranchSession;
 import io.seata.server.session.GlobalSession;
 
@@ -101,6 +102,10 @@ public class ATCore extends AbstractCore {
     @Override
     public boolean lockQuery(BranchType branchType, String resourceId, String xid, String lockKeys)
             throws TransactionException {
+        /**
+         * 获取是否被锁定
+         * @see AbstractLockManager#isLockable(String, String, String)
+         */
         return lockManager.isLockable(xid, resourceId, lockKeys);
     }
 

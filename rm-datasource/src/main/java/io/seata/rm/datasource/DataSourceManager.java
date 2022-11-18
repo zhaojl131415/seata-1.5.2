@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.seata.common.exception.NotSupportYetException;
 import io.seata.common.exception.ShouldNeverHappenException;
 import io.seata.core.context.RootContext;
@@ -32,6 +33,7 @@ import io.seata.core.model.Resource;
 import io.seata.core.protocol.ResultCode;
 import io.seata.core.protocol.transaction.GlobalLockQueryRequest;
 import io.seata.core.protocol.transaction.GlobalLockQueryResponse;
+import io.seata.core.rpc.netty.AbstractNettyRemotingServer;
 import io.seata.core.rpc.netty.RmNettyRemotingClient;
 import io.seata.rm.AbstractResourceManager;
 import io.seata.rm.datasource.undo.AbstractUndoLogManager;
@@ -61,6 +63,10 @@ public class DataSourceManager extends AbstractResourceManager {
         try {
             GlobalLockQueryResponse response;
             if (RootContext.inGlobalTransaction() || RootContext.requireGlobalLock()) {
+                /**
+                 * 发送netty消息
+                 * @see AbstractNettyRemotingServer.ServerHandler#channelRead(ChannelHandlerContext, Object)
+                 */
                 response = (GlobalLockQueryResponse) RmNettyRemotingClient.getInstance().sendSyncRequest(request);
             } else {
                 throw new RuntimeException("unknow situation!");

@@ -36,6 +36,7 @@ import io.seata.server.session.BranchSession;
 import io.seata.server.session.GlobalSession;
 import io.seata.server.session.SessionHelper;
 import io.seata.server.session.SessionHolder;
+import io.seata.server.transaction.at.ATCore;
 import io.seata.server.transaction.saga.SagaCore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,6 +120,10 @@ public class DefaultCore implements Core {
     @Override
     public boolean lockQuery(BranchType branchType, String resourceId, String xid, String lockKeys)
         throws TransactionException {
+        /**
+         * AT模式
+         * @see ATCore#lockQuery(BranchType, String, String, String)
+         */
         return getCore(branchType).lockQuery(branchType, resourceId, xid, lockKeys);
     }
 

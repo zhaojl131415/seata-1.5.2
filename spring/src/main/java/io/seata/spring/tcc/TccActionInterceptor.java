@@ -78,6 +78,12 @@ public class TccActionInterceptor implements MethodInterceptor, ConfigurationCha
         this.remotingDesc = remotingDesc;
     }
 
+    /**
+     * TCC模式 拦截器 拦截方法执行
+     * @param invocation the method invocation joinpoint
+     * @return
+     * @throws Throwable
+     */
     @Override
     public Object invoke(final MethodInvocation invocation) throws Throwable {
         if (!RootContext.inGlobalTransaction() || disable || RootContext.inSagaBranch()) {

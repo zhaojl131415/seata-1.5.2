@@ -93,6 +93,9 @@ public abstract class AbstractLockManager implements LockManager {
         }
         List<RowLock> locks = collectRowLocks(lockKey, resourceId, xid);
         try {
+            /**
+             * @see DataBaseLocker#isLockable(List)
+             */
             return getLocker().isLockable(locks);
         } catch (Exception t) {
             LOGGER.error("isLockable error, xid:{} resourceId:{}, lockKey:{}", xid, resourceId, lockKey, t);
