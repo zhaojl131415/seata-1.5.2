@@ -272,7 +272,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
      * 引入全局事务拦截器GlobalTransactionalInterceptor, 在客户端发起请求时会调用拦截器invoke方法，发起全局事务
      * @see GlobalTransactionalInterceptor#invoke(MethodInvocation)
      *
-     * 以下将进行扫描，并添加相应的拦截器
+     * 以下将进行扫描，并根据AT/TCC模式添加添加对应的拦截器
      * The following will be scanned, and added corresponding interceptor:
      *
      * TM:
